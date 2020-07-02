@@ -1,0 +1,23 @@
+#################################################
+###         .GITIGNORE FOR SOCKETCANPP        ###
+#################################################
+
+###
+# Build directories
+###
+build/
+
+###
+# .vscode
+###
+.vscode/
+
+###
+# Binaries
+###
+*.a
+*.so
+*.lib
+*.bin
+*.exe
+*.dll
