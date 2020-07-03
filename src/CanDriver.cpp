@@ -147,8 +147,6 @@ namespace sockcanpp {
     int32_t CanDriver::sendMessage(const CanMessage message, bool forceExtended) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        printf("Socket: %d\n", _socketFd);
-
         unique_lock<mutex> locky(*_lock);
 
         int32_t bytesWritten = 0;
@@ -159,17 +157,9 @@ namespace sockcanpp {
 
         auto canFrame = message.getRawFrame();
 
-        // if (canFrame.can_dlc > 8) canFrame.can_dlc = 8;
-
-        printf("canFrame contains: ID %d, data: ", canFrame.can_id);
-        for (int i = 0; i < canFrame.can_dlc; i++)
-            printf("%x ", canFrame.data[i]);
-        printf("\n");
-
         if (forceExtended || (message.getCanId() > CAN_SFF_MASK)) { canFrame.can_id |= CAN_EFF_FLAG; }
 
         bytesWritten = write(_socketFd, (const void*)&canFrame, sizeof(canFrame));
-        printf("Wrote %d bytes to socket: %d\n", bytesWritten, _socketFd);
 
         if (bytesWritten == -1) { throw CanException(formatString("FAILED to write data to socket! Error: %d => %s", errno, strerror(errno)), _socketFd); }
 
