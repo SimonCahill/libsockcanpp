@@ -58,7 +58,7 @@ namespace sockcanpp {
 
             CanMessage(const CanId canId, const string frameData): _canIdentifier(canId), _frameData(frameData) {
                 if (frameData.size() > 8) {
-                    throw system_error(error_code(0xbad'd1c, generic_category()), "Payload too big!");
+                    throw system_error(error_code(0xbadd1c, generic_category()), "Payload too big!");
                 }
 
                 struct can_frame rawFrame;
