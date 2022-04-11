@@ -82,8 +82,7 @@ namespace sockcanpp {
         CanDriver(canInterface, canProtocol, 0 /* match all */, defaultSenderId) {}
 
     CanDriver::CanDriver(const string canInterface, const int32_t canProtocol, const int32_t filterMask, const CanId defaultSenderId):
-        _defaultSenderId(defaultSenderId), _canProtocol(canProtocol), _canInterface(canInterface), _canFilterMask(filterMask), _socketFd(-1),
-        _lock(new mutex()) {
+        _defaultSenderId(defaultSenderId), _canProtocol(canProtocol), _canInterface(canInterface), _canFilterMask(filterMask), _socketFd(-1) {
         initialiseSocketCan();
     }
 #pragma endregion
@@ -100,7 +99,7 @@ namespace sockcanpp {
     bool CanDriver::waitForMessages(milliseconds timeout) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        unique_lock<mutex> locky(*_lock);
+        unique_lock<mutex> locky(_lock);
 
         fd_set readFileDescriptors;
         timeval waitTime;
@@ -122,7 +121,7 @@ namespace sockcanpp {
     CanMessage CanDriver::readMessage() {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        unique_lock<mutex> locky(*_lock);
+        unique_lock<mutex> locky(_lock);
 
         int32_t readBytes = 0;
         can_frame canFrame;
@@ -147,7 +146,7 @@ namespace sockcanpp {
     int32_t CanDriver::sendMessage(const CanMessage message, bool forceExtended) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        unique_lock<mutex> locky(*_lock);
+        unique_lock<mutex> locky(_lock);
 
         int32_t bytesWritten = 0;
 
@@ -196,7 +195,7 @@ namespace sockcanpp {
     queue<CanMessage> CanDriver::readQueuedMessages() {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        unique_lock<mutex> locky(*_lock);
+        unique_lock<mutex> locky(_lock);
 
         queue<CanMessage> messages;
 
@@ -213,7 +212,7 @@ namespace sockcanpp {
     void CanDriver::setCanFilterMask(const int32_t mask) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        unique_lock<mutex> locky(*_lock);
+        unique_lock<mutex> locky(_lock);
         can_filter canFilter;
 
         canFilter.can_id   = _defaultSenderId;
@@ -237,7 +236,7 @@ namespace sockcanpp {
      * @brief Initialises the underlying CAN socket.
      */
     void CanDriver::initialiseSocketCan() {
-        // unique_lock<mutex> locky(*_lock);
+        // unique_lock<mutex> locky(_lock);
 
         struct sockaddr_can address;
         struct ifreq ifaceRequest;
@@ -278,7 +277,7 @@ namespace sockcanpp {
      * @brief Closes the underlying CAN socket.
      */
     void CanDriver::uninitialiseSocketCan() {
-        unique_lock<mutex> locky(*_lock);
+        unique_lock<mutex> locky(_lock);
 
         if (_socketFd <= 0) { throw CanCloseException("Cannot close invalid socket!"); }
 

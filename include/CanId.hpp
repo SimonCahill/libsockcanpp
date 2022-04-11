@@ -72,8 +72,8 @@ namespace sockcanpp {
         public: // +++ Operators +++
 
 #pragma region "Implicit Cast Operators"
-        operator int16_t()  const { return isStandardFrameId() ? (int16_t)_identifier : throw system_error(error_code(0xbad'1d, generic_category()), "INVALID CAST: ID is extended or invalid!"); }
-        operator uint16_t() const { return isStandardFrameId() ? (uint16_t)_identifier : throw system_error(error_code(0xbad'1d, generic_category()), "INVALID CAST: ID is extended or invalid!"); }
+        operator int16_t()  const { return isStandardFrameId() ? (int16_t)_identifier : throw system_error(error_code(0xbad1d, generic_category()), "INVALID CAST: ID is extended or invalid!"); }
+        operator uint16_t() const { return isStandardFrameId() ? (uint16_t)_identifier : throw system_error(error_code(0xbad1d, generic_category()), "INVALID CAST: ID is extended or invalid!"); }
         operator int32_t()  const { return _identifier; }
         operator uint32_t() const { return _identifier; }
 #pragma endregion
