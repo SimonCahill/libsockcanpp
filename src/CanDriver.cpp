@@ -204,7 +204,7 @@ namespace sockcanpp {
 	    throw InvalidSocketException("Invalid socket!", _socketFd);
         unique_lock<mutex> locky(_lock);
         queue<CanMessage> messages;
-        for (int32_t i = _queueSize; 0 > i; --i)
+        for (int32_t i = _queueSize; 0 < i; --i)
 	    messages.emplace(readMessageLock(false));
         return messages;
     }
