@@ -122,8 +122,8 @@ namespace sockcanpp {
 	return readMessageLock();
     }
 
-        /**
-     * @brief Attempts to read a message from the associated CAN bus.
+    /**
+     * @brief readMessage deadlock guard, attempts to read a message from the associated CAN bus.
      *
      * @return CanMessage The message read from the bus.
      */
