@@ -98,6 +98,7 @@ namespace sockcanpp {
             virtual void uninitialiseSocketCan(); ///!< Uninitialises socketcan
 
         private:
+            virtual CanMessage readMessageLock(bool const lock = true); ///!< readMessage deadlock guard
             CanId _defaultSenderId; ///!< The ID to send messages with if no other ID was set.
 
             int32_t _canFilterMask; ///!< The bit mask used to filter CAN messages

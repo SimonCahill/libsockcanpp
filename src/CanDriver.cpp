@@ -119,22 +119,29 @@ namespace sockcanpp {
      * @return CanMessage The message read from the bus.
      */
     CanMessage CanDriver::readMessage() {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
-
-        unique_lock<mutex> locky(_lock);
-
-        int32_t readBytes = 0;
-        can_frame canFrame;
-
-        memset(&canFrame, 0, sizeof(can_frame));
-
-        readBytes = read(_socketFd, &canFrame, sizeof(can_frame));
-
-        if (readBytes < 0) { throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), _socketFd); }
-
-        return CanMessage(canFrame);
+	return readMessageLock();
     }
 
+        /**
+     * @brief Attempts to read a message from the associated CAN bus.
+     *
+     * @return CanMessage The message read from the bus.
+     */
+    CanMessage CanDriver::readMessageLock(bool const lock) {
+	std::unique_ptr<std::unique_lock<std::mutex>> _lockLck{nullptr};
+	if (lock)
+	    _lockLck = std::unique_ptr<std::unique_lock<std::mutex>>{new std::unique_lock<std::mutex>{_lock}};
+        if (0 > _socketFd)
+	    throw InvalidSocketException("Invalid socket!", _socketFd);
+        int32_t readBytes{0};
+        can_frame canFrame;
+        memset(&canFrame, 0, sizeof(can_frame));
+        readBytes = read(_socketFd, &canFrame, sizeof(can_frame));
+        if (0 > readBytes)
+	    throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), _socketFd);
+        return CanMessage{canFrame};
+    }
+    
     /**
      * @brief Attempts to send a CAN message on the associated bus.
      *
@@ -193,14 +200,12 @@ namespace sockcanpp {
      * @return queue<CanMessage> A queue containing the messages read from the bus buffer.
      */
     queue<CanMessage> CanDriver::readQueuedMessages() {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
-
+        if (_socketFd < 0)
+	    throw InvalidSocketException("Invalid socket!", _socketFd);
         unique_lock<mutex> locky(_lock);
-
         queue<CanMessage> messages;
-
-        for (int32_t i = _queueSize; i > 0; i--) { messages.emplace(readMessage()); }
-
+        for (int32_t i = _queueSize; 0 > i; --i)
+	    messages.emplace(readMessageLock(false));
         return messages;
     }
 
