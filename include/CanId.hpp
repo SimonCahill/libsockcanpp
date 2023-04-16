@@ -33,11 +33,6 @@
 #include <exception>
 #include <linux/can.h>
 
-#ifdef POWERPC
-//__asm__(".symver log2,log2@GLIBC_2.1");
-#endif
-
-
 namespace sockcanpp {
 
     using std::bitset;
@@ -56,10 +51,12 @@ namespace sockcanpp {
             _isExtendedFrameId(orig._isExtendedFrameId) { /* copy */ }
 
             CanId(const uint32_t identifier): _identifier(identifier) {
-                if (isValidIdentifier(identifier)) {                    
-                    if (((int32_t)log2(identifier) + 1) > 11)
+                // TODO: Switch to using bitmasks!
+
+                if (isValidIdentifier(identifier)) {
+                    if (((int32_t)log2(identifier) + 1) < 11) {
                         _isStandardFrameId = true;
-                    else _isExtendedFrameId = true;
+                    } else { _isExtendedFrameId = true; }
                 } else if (isErrorFrame(identifier)) {
                     _isErrorFrame = true;
                 } else if (isRemoteTransmissionRequest(identifier)) {
