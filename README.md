@@ -3,6 +3,8 @@
 Welcome to the documentation for libsockcanpp!<br >
 libsockcanpp is a socketcan wrapper library for C++, aimed to be easy to use without any fuss.
 
+[![Build](https://github.com/SimonCahill/libsockcanpp/actions/workflows/cmake.yml/badge.svg)](https://github.com/SimonCahill/libsockcanpp/actions/workflows/cmake.yml)
+
 # Useful Links
 
  - GitHub repo: [https://github.com/beatsleigher/libsockcanpp](https://github.com/beatsleigher/libsockcanpp)
