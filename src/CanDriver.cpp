@@ -163,7 +163,7 @@ namespace sockcanpp {
 
         auto canFrame = message.getRawFrame();
 
-        if (forceExtended || (message.getCanId() > CAN_SFF_MASK)) { canFrame.can_id |= CAN_EFF_FLAG; }
+        if (forceExtended || ((uint32_t)message.getCanId() > CAN_SFF_MASK)) { canFrame.can_id |= CAN_EFF_FLAG; }
 
         bytesWritten = write(_socketFd, (const void*)&canFrame, sizeof(canFrame));
 
