@@ -106,7 +106,9 @@ namespace sockcanpp {
             int32_t _socketFd; ///!< The CAN socket file descriptor
             int32_t _queueSize; ////!< The size of the message queue read by waitForMessages()
 
-            mutex _lock; ///!< Mutex for thread-safety.
+            ///!< Mutex for thread-safety.
+            mutex _lock; 
+            mutex _lockSend; 
 
             string _canInterface; ///!< The CAN interface used for communication (e.g. can0, can1, ...)
 

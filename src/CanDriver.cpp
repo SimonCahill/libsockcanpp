@@ -153,7 +153,7 @@ namespace sockcanpp {
     int32_t CanDriver::sendMessage(const CanMessage message, bool forceExtended) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        unique_lock<mutex> locky(_lock);
+        unique_lock<mutex> locky(_lockSend);
 
         int32_t bytesWritten = 0;
 
