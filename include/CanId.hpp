@@ -32,6 +32,7 @@
 #include <cmath>
 #include <exception>
 #include <linux/can.h>
+#include <system_error>
 
 namespace sockcanpp {
 
