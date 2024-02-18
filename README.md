@@ -7,7 +7,7 @@ libsockcanpp is a socketcan wrapper library for C++, aimed to be easy to use wit
 
 # Useful Links
 
- - GitHub repo: [https://github.com/beatsleigher/libsockcanpp](https://github.com/beatsleigher/libsockcanpp)
+ - GitHub repo: [https://github.com/beatsleigher/libsockcanpp](https://github.com/SimonCahill/libsockcanpp)
 
 # Getting Started
 
