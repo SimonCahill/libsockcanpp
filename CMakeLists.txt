@@ -32,7 +32,7 @@ write_basic_package_version_file(
     COMPATIBILITY AnyNewerVersion
 )
 
-install(FILES "cmake/${PROJECT_NAME}Config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+install(FILES "cmake/lib${PROJECT_NAME}Config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}ConfigVersion.cmake"
     DESTINATION lib/cmake/${PROJECT_NAME})
 
 
@@ -46,3 +46,15 @@ configure_file(libsockcanpp.pc.in ${CMAKE_BINARY_DIR}/libsockcanpp.pc @ONLY)
 install(FILES ${CMAKE_BINARY_DIR}/libsockcanpp.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 include(cmake/cpack.cmake)
+
+###
+# Docs target
+###
+add_custom_target("docs" COMMENT "Create Doxygen documentation")
+add_custom_command(
+    TARGET "docs"
+    POST_BUILD
+        COMMENT "Generate Doxygen documentation for publication or reading"
+        COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
