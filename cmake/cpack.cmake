@@ -1,5 +1,5 @@
 # these are cache variables, so they could be overwritten with -D,
-set(CPACK_PACKAGE_NAME ${PROJECT_NAME}
+set(CPACK_PACKAGE_NAME lib${PROJECT_NAME}
     CACHE STRING "The resulting package name"
 )
 # which is useful in case of packing only selected components instead of the whole thing
