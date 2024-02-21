@@ -15,14 +15,14 @@ libsockcanpp is a socketcan wrapper library for C++, aimed to be easy to use wit
 
 libsockcanpp was designed with use in CMake projects, but it can also easily be integrated into existing Makefile projects, as long as cmake is present on the build system.
 
-1) clone the repository: `git clone https://github.com/Beatsleigher/libsockcanpp.git`
+1) clone the repository: `git clone https://github.com/SimonCahill/libsockcanpp.git`
 2) create build directory: `mkdir build && cd build`
 3) generate build files: `cmake .. -DCMAKE_TOOLCHAIN_FILE=../toolchains/desired-toolchain.cmake`
 4) building library: `make -j`
 
 ## Incorporating into Cmake projects:
 
-1) clone the repository: `git clone https://github.com/Beatsleigher/libsockcanpp.git`
+1) clone the repository: `git clone https://github.com/SimonCahill/libsockcanpp.git`
 2) add the following to CMakeLists.txt
 ```cmake
 if (NOT TARGET sockcanpp)
