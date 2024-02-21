@@ -4,7 +4,7 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = "Waveshare 8ch Relay Board Example"
+PROJECT_NAME           = "Libsockcanpp"
 PROJECT_NUMBER         =
 PROJECT_BRIEF          = "A complete C++ wrapper around socketcan."
 PROJECT_LOGO           =
