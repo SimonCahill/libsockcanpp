@@ -8,6 +8,16 @@
 build/
 
 ###
+# Documentation (Doxygen)
+###
+html/
+
+###
+# cpack packages
+###
+packages/
+
+###
 # .vscode
 ###
 .vscode/
