@@ -61,9 +61,9 @@ namespace sockcanpp {
      */
     class CanDriver {
         public: // +++ Static +++
-            static const int32_t CAN_MAX_DATA_LENGTH; //!< The maximum amount of bytes allowed in a single CAN frame
-            static const int32_t CAN_SOCK_RAW; //!< The raw CAN protocol
-            static const int32_t CAN_SOCK_SEVEN; //!< A separate CAN protocol, used by certain embedded device OEMs.
+            static constexpr int32_t CAN_MAX_DATA_LENGTH = 8; //!< The maximum amount of bytes allowed in a single CAN frame
+            static constexpr int32_t CAN_SOCK_RAW        = CAN_RAW; //!< The raw CAN protocol
+            static constexpr int32_t CAN_SOCK_SEVEN      = 7; //!< A separate CAN protocol, used by certain embedded device OEMs.
 
         public: // +++ Constructor / Destructor +++
             CanDriver(const string& canInterface, const int32_t canProtocol, const CanId defaultSenderId = 0); //!< Constructor
@@ -130,7 +130,7 @@ namespace sockcanpp {
     template<typename... Args>
     string formatString(const string& format, Args... args)  {
         using std::unique_ptr;
-        auto stringSize = snprintf(NULL, 0, format.c_str(), args...) + 1; // +1 for \0
+        auto stringSize = snprintf(nullptr, 0, format.c_str(), args...) + 1; // +1 for \0
         unique_ptr<char[]> buffer(new char[stringSize]);
 
         snprintf(buffer.get(), stringSize, format.c_str(), args...);
