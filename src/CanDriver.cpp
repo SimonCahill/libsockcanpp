@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
@@ -66,6 +67,7 @@ namespace sockcanpp {
     using std::string;
     using std::strncpy;
     using std::unique_lock;
+    using std::unique_ptr;
     using std::chrono::milliseconds;
     using std::this_thread::sleep_for;
 
@@ -73,16 +75,13 @@ namespace sockcanpp {
     //      PUBLIC IMPLEMENTATION       //
     //////////////////////////////////////
 
-    const int32_t CanDriver::CAN_MAX_DATA_LENGTH = 8;
-    const int32_t CanDriver::CAN_SOCK_RAW        = CAN_RAW;
-    const int32_t CanDriver::CAN_SOCK_SEVEN      = 7;
 
 #pragma region Object Construction
-    CanDriver::CanDriver(string canInterface, int32_t canProtocol, const CanId defaultSenderId):
+    CanDriver::CanDriver(const string& canInterface, int32_t canProtocol, const CanId defaultSenderId):
         CanDriver(canInterface, canProtocol, 0 /* match all */, defaultSenderId) {}
 
-    CanDriver::CanDriver(const string canInterface, const int32_t canProtocol, const int32_t filterMask, const CanId defaultSenderId):
-        _defaultSenderId(defaultSenderId), _canProtocol(canProtocol), _canInterface(canInterface), _canFilterMask(filterMask), _socketFd(-1) {
+    CanDriver::CanDriver(const string& canInterface, const int32_t canProtocol, const int32_t filterMask, const CanId defaultSenderId):
+        _defaultSenderId(defaultSenderId), _canFilterMask(filterMask), _canProtocol(canProtocol), _canInterface(canInterface) {
         initialiseSocketCan();
     }
 #pragma endregion
@@ -108,9 +107,17 @@ namespace sockcanpp {
 
         FD_ZERO(&readFileDescriptors);
         FD_SET(_socketFd, &readFileDescriptors);
-        _queueSize = select(_socketFd + 1, &readFileDescriptors, 0, 0, &waitTime);
+        const auto fdsAvailable = select(_socketFd + 1, &readFileDescriptors, nullptr, nullptr, &waitTime);
 
-        return _queueSize > 0;
+        int32_t bytesAvailable{0};
+        const auto retCode = ioctl(_socketFd, FIONREAD, &bytesAvailable);
+        if (retCode == 0) {
+            _queueSize = static_cast<int32_t>(std::ceil(bytesAvailable / sizeof(can_frame)));
+        } else {
+            _queueSize = 0;
+        }
+
+        return fdsAvailable > 0;
     }
 
     /**
@@ -128,17 +135,23 @@ namespace sockcanpp {
      * @return CanMessage The message read from the bus.
      */
     CanMessage CanDriver::readMessageLock(bool const lock) {
-	std::unique_ptr<std::unique_lock<std::mutex>> _lockLck{nullptr};
-	if (lock)
-	    _lockLck = std::unique_ptr<std::unique_lock<std::mutex>>{new std::unique_lock<std::mutex>{_lock}};
-        if (0 > _socketFd)
-	    throw InvalidSocketException("Invalid socket!", _socketFd);
-        int32_t readBytes{0};
-        can_frame canFrame;
+        unique_ptr<unique_lock<mutex>> locky{nullptr};
+
+        if (lock) {
+	        locky = unique_ptr<unique_lock<mutex>>{new unique_lock<mutex>{_lock}};
+        }
+        
+        if (0 > _socketFd) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        ssize_t readBytes{0};
+        can_frame canFrame{};
+
         memset(&canFrame, 0, sizeof(can_frame));
+
         readBytes = read(_socketFd, &canFrame, sizeof(can_frame));
-        if (0 > readBytes)
-	    throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), _socketFd);
+
+        if (0 > readBytes) { throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), _socketFd); }
+
         return CanMessage{canFrame};
     }
     
@@ -148,14 +161,14 @@ namespace sockcanpp {
      * @param message The message to be sent.
      * @param forceExtended Whether or not to force use of an extended ID.
      *
-     * @return int32_t The amount of bytes sent on the bus.
+     * @return ssize_t The amount of bytes sent on the bus.
      */
-    int32_t CanDriver::sendMessage(const CanMessage message, bool forceExtended) {
+    ssize_t CanDriver::sendMessage(const CanMessage& message, bool forceExtended) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
         unique_lock<mutex> locky(_lockSend);
 
-        int32_t bytesWritten = 0;
+        ssize_t bytesWritten = 0;
 
         if (message.getFrameData().size() > CAN_MAX_DATA_LENGTH) {
             throw CanException(formatString("INVALID data length! Message must be smaller than %d bytes!", CAN_MAX_DATA_LENGTH), _socketFd);
@@ -181,10 +194,10 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    int32_t CanDriver::sendMessageQueue(queue<CanMessage> messages, milliseconds delay, bool forceExtended) {
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, milliseconds delay, bool forceExtended) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
-        int32_t totalBytesWritten = 0;
+        ssize_t totalBytesWritten = 0;
 
         while (!messages.empty()) {
             totalBytesWritten += sendMessage(messages.front(), forceExtended);
@@ -200,12 +213,15 @@ namespace sockcanpp {
      * @return queue<CanMessage> A queue containing the messages read from the bus buffer.
      */
     queue<CanMessage> CanDriver::readQueuedMessages() {
-        if (_socketFd < 0)
-	    throw InvalidSocketException("Invalid socket!", _socketFd);
-        unique_lock<mutex> locky(_lock);
-        queue<CanMessage> messages;
-        for (int32_t i = _queueSize; 0 < i; --i)
-	    messages.emplace(readMessageLock(false));
+        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        unique_lock<mutex> locky{_lock};
+        queue<CanMessage> messages{};
+
+        for (int32_t i = _queueSize; 0 < i; --i) {
+	        messages.emplace(readMessageLock(false));
+        }
+
         return messages;
     }
 
@@ -248,8 +264,8 @@ namespace sockcanpp {
         int64_t fdOptions = 0;
         int32_t tmpReturn;
 
-        memset(&address, 0, sizeof(sizeof(struct sockaddr_can)));
-        memset(&ifaceRequest, 0, sizeof(sizeof(struct ifreq)));
+        memset(&address, 0, sizeof(struct sockaddr_can));
+        memset(&ifaceRequest, 0, sizeof(struct ifreq));
 
         _socketFd = socket(PF_CAN, SOCK_RAW, _canProtocol);
 
