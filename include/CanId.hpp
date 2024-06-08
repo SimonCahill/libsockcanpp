@@ -47,124 +47,115 @@ namespace sockcanpp {
      */
     struct CanId {
         public: // +++ Constructors +++
-            CanId(const CanId& orig): _identifier(orig._identifier), _isErrorFrame(orig._isErrorFrame),
-            _isRemoteTransmissionRequest(orig._isRemoteTransmissionRequest), _isStandardFrameId(orig._isStandardFrameId),
-            _isExtendedFrameId(orig._isExtendedFrameId) { /* copy */ }
-
-            CanId(const uint32_t identifier): _identifier(identifier) {
-                // TODO: Switch to using bitmasks!
-
-                if (isValidIdentifier(identifier)) {
-                    if (((int32_t)log2(identifier) + 1) < 11) {
-                        _isStandardFrameId = true;
-                    } else { _isExtendedFrameId = true; }
-                } else if (isErrorFrame(identifier)) {
-                    _isErrorFrame = true;
-                } else if (isRemoteTransmissionRequest(identifier)) {
-                    _isRemoteTransmissionRequest = true;
-                }
-            }
-
-            CanId(): _identifier(0), _isStandardFrameId(true) { }
+            constexpr CanId(const CanId& id) = default;
+            constexpr CanId() = default;
+            constexpr CanId(const canid_t id): m_identifier(id) { }
+            constexpr CanId(const int32_t id): m_identifier(id) { }
 
         public: // +++ Operators +++
+            constexpr canid_t operator *() const { return m_identifier; } //!< Returns the raw CAN ID value.
 
-#pragma region "Implicit Cast Operators"
-        operator int16_t()  const { return isStandardFrameId() ? (int16_t)_identifier : throw system_error(error_code(0xbad1d, generic_category()), "INVALID CAST: ID is extended or invalid!"); }
-        operator uint16_t() const { return isStandardFrameId() ? (uint16_t)_identifier : throw system_error(error_code(0xbad1d, generic_category()), "INVALID CAST: ID is extended or invalid!"); }
-        operator int32_t()  const { return _identifier; }
-        operator uint32_t() const { return _identifier; }
+#pragma region "Conversions"
+        constexpr operator int16_t()  const { return static_cast<int16_t>(m_identifier) & CAN_ERR_MASK; }
+        constexpr operator uint16_t() const { return static_cast<uint16_t>(m_identifier) & CAN_ERR_MASK; }
+        constexpr operator int32_t()  const { return m_identifier & CAN_ERR_MASK; }
+        constexpr operator canid_t() const { return m_identifier & CAN_ERR_MASK; }
 #pragma endregion
 
 #pragma region "Bitwise Operators"
-        CanId    operator &(CanId& x)         const { return _identifier & x._identifier; }
-        CanId    operator &(const CanId x)    const { return _identifier & x._identifier; }
-        CanId    operator &(const int16_t x)  const { return _identifier & x; }
-        CanId    operator &(const uint16_t x) const { return _identifier & x; }
-        CanId    operator &(const int32_t x)  const { return _identifier & x; }
-        CanId    operator &(const uint32_t x) const { return _identifier & x; }
-        CanId    operator &(const int64_t x)  const { return _identifier & x; }
-        CanId    operator &(const uint64_t x) const { return _identifier & x; }
+        template<typename T>
+        constexpr CanId    operator &(const T x)        const { return m_identifier & x; } //!< Performs a bitwise AND operation on this ID and another.
+        constexpr CanId    operator &(const CanId& x)   const { return m_identifier & x.m_identifier; } //!< Performs a bitwise AND operation on this ID and another.
 
-        CanId    operator |(CanId& x)         const { return _identifier | x._identifier; }
-        CanId    operator |(const CanId x)    const { return _identifier | x._identifier; }
-        CanId    operator |(const int16_t x)  const { return _identifier | x; }
-        CanId    operator |(const uint16_t x) const { return _identifier | x; }
-        CanId    operator |(const int32_t x)  const { return _identifier | x; }
-        CanId    operator |(const uint32_t x) const { return _identifier | x; }
-        CanId    operator |(const int64_t x)  const { return _identifier | x; }
-        CanId    operator |(const uint64_t x) const { return _identifier | x; }
+        template<typename T>
+        constexpr CanId    operator |(const T x)        const { return m_identifier | x; } //!< Performs a bitwise OR operation on this ID and a 16-bit integer.
+        constexpr CanId    operator |(const CanId& x)   const { return m_identifier | x.m_identifier; } //!< Performs a bitwise OR operation on this ID and another.
+
+        template<typename T>
+        constexpr CanId    operator ^(const T x)        const { return m_identifier ^ x; } //!< Performs a bitwise XOR operation on this ID and a 16-bit integer.
+        constexpr CanId    operator ^(const CanId& x)   const { return m_identifier ^ x.m_identifier; } //!< Performs a bitwise XOR operation on this ID and another.
+
+        constexpr CanId    operator ~()                 const { return ~m_identifier; } //!< Performs a bitwise NOT operation on this ID.
+
+        template<typename T>
+        constexpr CanId    operator <<(const T x)       const { return m_identifier << x; } //!< Shifts this ID to the left by a 16-bit integer.
+        constexpr CanId    operator <<(const CanId& x)  const { return m_identifier << x.m_identifier; } //!< Shifts this ID to the left by another.
+
+        template<typename T>
+        constexpr CanId    operator >>(const T x)       const { return m_identifier >> x; } //!< Shifts this ID to the right by a 16-bit integer.
+        constexpr CanId    operator >>(const CanId& x)  const { return m_identifier >> x.m_identifier; } //!< Shifts this ID to the right by another.
+
+        template<typename T>
+        CanId    operator <<=(const T x)                      { return m_identifier <<= x; } //!< Shifts this ID to the left by a 16-bit integer.
+        CanId    operator <<=(const CanId& x)                 { return m_identifier <<= x.m_identifier; } //!< Shifts this ID to the left by another.
+
+        template<typename T>
+        CanId    operator >>=(const T x)                      { return m_identifier >>= x; } //!< Shifts this ID to the right by a 16-bit integer.
+        CanId    operator >>=(const CanId& x)                 { return m_identifier >>= x.m_identifier; } //!< Shifts this ID to the right by another.
+
 #pragma endregion
 
 #pragma region "Comparison Operators"
-        bool operator ==(CanId& x)         const { return _identifier == x._identifier; }
-        bool operator ==(const CanId& x)   const { return _identifier == x._identifier; }
-        bool operator ==(const int16_t x)  const { return _identifier == x; }
-        bool operator ==(const uint16_t x) const { return _identifier == x; }
-        bool operator ==(const int32_t x)  const { return _identifier == x; }
-        bool operator ==(const uint32_t x) const { return _identifier == x; }
-        bool operator ==(const int64_t x)  const { return (x > UINT32_MAX || x < INT32_MIN) ? false : x == _identifier; }
-        bool operator ==(const uint64_t x) const { return x > UINT32_MAX ? false : x == _identifier; }
-        bool operator !=(CanId& x)         const { return _identifier != x._identifier; }
-        bool operator !=(const CanId& x)   const { return _identifier != x._identifier; }
-        bool operator !=(const int16_t x)  const { return _identifier != x; }
-        bool operator !=(const uint16_t x) const { return _identifier != x; }
-        bool operator !=(const int32_t x)  const { return _identifier != x; }
-        bool operator !=(const uint32_t x) const { return _identifier != x; }
-        bool operator !=(const int64_t x)  const { return (x > UINT32_MAX || x < INT32_MIN) ? false : x != _identifier; }
-        bool operator !=(const uint64_t x) const { return x > UINT32_MAX ? false : x != _identifier; }
+        constexpr bool operator ==(const CanId& x)   const { return m_identifier == x.m_identifier; } //!< Compares this ID to another.
 
-        bool operator <(CanId& x)          const { return x._identifier < _identifier; }
-        bool operator <(int32_t x)         const { return x < _identifier; }
-        bool operator <(uint32_t x)        const { return x < _identifier; }
-        bool operator <(int16_t x)         const { return x < _identifier; }
-        bool operator <(uint16_t x)        const { return x < _identifier; }
-        bool operator <=(CanId& x)         const { return x._identifier <= _identifier; }
-        bool operator >(CanId& x)          const { return x._identifier > _identifier; }
-        bool operator >(int32_t x)         const { return x > _identifier; }
-        bool operator >(uint32_t x)        const { return x > _identifier; }
-        bool operator >(int16_t x)         const { return x > _identifier; }
-        bool operator >(uint16_t x)        const { return x > _identifier; }
-        bool operator >=(CanId& x)         const { return x._identifier >= _identifier; }
-        bool operator <(const CanId& x)    const { return x._identifier < _identifier; }
-        bool operator <=(const CanId& x)   const { return x._identifier <= _identifier; }
-        bool operator >(const CanId& x)    const { return x._identifier > _identifier; }
-        bool operator >=(const CanId& x)   const { return x._identifier >= _identifier; }
+        template<typename T>
+        constexpr bool operator ==(const T x)        const { return m_identifier == static_cast<canid_t>(x); } //!< Compares this ID to another.
+
+        constexpr bool operator !=(const CanId& x)   const { return m_identifier != x.m_identifier; } //!< Compares this ID to another.
+
+        template<typename T>
+        constexpr bool operator !=(const T x)        const { return m_identifier != static_cast<canid_t>(x); } //!< Compares this ID to another.
+        
+        template<typename T>
+        constexpr bool operator <(T x)               const { return static_cast<canid_t>(x) < m_identifier; } //!< Compares this ID to another.
+
+        template<typename T>
+        constexpr bool operator >(T x)               const { return static_cast<canid_t>(x) > m_identifier; } //!< Compares this ID to a 32-bit integer.
+
+        template<typename T>
+        constexpr bool operator <=(const T x)        const { return x.m_identifier <= m_identifier; } //!< Compares this ID to another.
+
+        template<typename T>
+        constexpr bool operator >=(const T x)        const { return x.m_identifier >= m_identifier; } //!< Compares this ID to another.
 #pragma endregion
 
 #pragma region "Assignment Operators"
-        CanId operator =(const int32_t val) {
-            uint32_t tmpVal = val;
-            auto tmp = (isValidIdentifier(tmpVal) ? CanId(val) : throw system_error(error_code(0x5421, generic_category()), "INVALID CAST: ID is extended or invalid!"));
-            return tmp;
-        }
+        template<typename T>
+        constexpr CanId operator =(const T val) { return CanId(val); } //!< Assigns a new integer to this CanID
 
-        CanId operator =(const uint32_t val) {
-            uint32_t tmp = val;
-            return (isValidIdentifier(tmp) ? CanId(val) : throw system_error(error_code(0x5421, generic_category()), "INVALID CAST: ID is extended or invalid!"));
-        }
-
-        CanId operator =(const int64_t val) { return operator =((int32_t)val); }
+        constexpr CanId operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
 #pragma endregion
 
 #pragma region "Arithmetic Operators"
-        CanId    operator +(CanId& x)         const { return _identifier + x._identifier; }
-        CanId    operator +(const CanId& x)   const { return _identifier + x._identifier; }
-        CanId    operator +(const int16_t x)  const { return _identifier + x; }
-        CanId    operator +(const uint16_t x) const { return _identifier + x; }
-        CanId    operator +(const int32_t x)  const { return _identifier + x; }
-        CanId    operator +(const uint32_t x) const { return _identifier + x; }
-        CanId    operator +(const int64_t x)  const { return _identifier + x; }
-        CanId    operator +(const uint64_t x) const { return _identifier + x; }
+        template<typename T>
+        constexpr CanId    operator +(const T x)    const { return m_identifier + x; }
 
-        CanId    operator -(CanId& x)         const { return _identifier - x._identifier; }
-        CanId    operator -(const CanId& x)   const { return _identifier - x._identifier; }
-        CanId    operator -(const int16_t x)  const { return _identifier - x; }
-        CanId    operator -(const uint16_t x) const { return _identifier - x; }
-        CanId    operator -(const int32_t x)  const { return _identifier - x; }
-        CanId    operator -(const uint32_t x) const { return _identifier - x; }
-        CanId    operator -(const int64_t x)  const { return _identifier - x; }
-        CanId    operator -(const uint64_t x) const { return _identifier - x; }
+        template<typename T>
+        constexpr CanId    operator +=(const T x)         { return m_identifier += x; }
+
+        template<typename T>
+        constexpr CanId    operator -=(const T x)         { return m_identifier -= x; }
+
+        template<typename T>
+        constexpr CanId    operator -(const T x)    const { return m_identifier - x; }
+
+        template<typename T>
+        constexpr CanId    operator *(const T x)    const { return m_identifier * x; }
+
+        template<typename T>
+        constexpr CanId    operator *= (const T x)        { return m_identifier *= x; }
+
+        template<typename T>
+        constexpr CanId    operator /(const T x)    const { return m_identifier / x; }
+
+        template<typename T>
+        constexpr CanId    operator /=(const T x)         { return m_identifier /= x; }
+
+        template<typename T>
+        constexpr CanId    operator %(const T x)    const { return m_identifier % x; }
+
+        template<typename T>
+        constexpr CanId    operator %=(const T x)         { return m_identifier %= x; }
 #pragma endregion
 
         public: // +++ Validity Checks +++
@@ -176,16 +167,9 @@ namespace sockcanpp {
              * @return true If value is a valid CAN identifier.
              * @return false Otherwise.
              */
-            static bool isValidIdentifier(uint32_t value) {
-                int32_t tmpValue = ((int32_t)log2(value) + 2); // Get bit count
-
-                // Check for extended frame flag
-                if (tmpValue >= 29) {
-                    value = (value & CAN_EFF_FLAG) ? (value & CAN_EFF_MASK) : (value & CAN_SFF_MASK);
-                    tmpValue = ((int32_t)log2(value) + 1); // Get bit count again
-                }
-
-                return (value == 0) /* Default value, also valid ID */ || ((tmpValue <= 29 && tmpValue > 0));
+            template<typename T>
+            static constexpr bool isValidIdentifier(T value) {
+                return static_cast<canid_t>(value) <= CAN_EFF_MASK;
             }
     
             /**
@@ -196,9 +180,9 @@ namespace sockcanpp {
              * @return true If value has the error frame flag (bit) set to 1.
              * @return false Otherwise.
              */
-            static bool isErrorFrame(uint32_t value) {
-                try { return bitset<sizeof(int32_t)>(value).test(29); }
-                catch (...) { return false; /* Brute-force, but works. */ }
+            template<typename T>
+            static constexpr bool isErrorFrame(T value) {
+                return static_cast<canid_t>(value) & CAN_ERR_FLAG;
             }
 
             /**
@@ -209,27 +193,35 @@ namespace sockcanpp {
              * @return true If the frame is a remote transmission request.
              * @return false Otherwise.
              */
-            static bool isRemoteTransmissionRequest(uint32_t value) {
-                try { return bitset<sizeof(int32_t)>(value).test(30); }
-                catch (...) { return false; /* Brute-force, but works. */ }
+            template<typename T>
+            static constexpr bool isRemoteTransmissionRequest(T value) {
+                return static_cast<canid_t>(value) & CAN_RTR_FLAG;
+            }
+
+            /**
+             * @brief Indicates whether or not a given integer is an extended frame ID.
+             * 
+             * @param value The integer to check.
+             * 
+             * @return true If the frame is in the extended format.
+             * @return false Otherwise.
+             */
+            template<typename T>
+            static constexpr bool isExtendedFrame(T value) {
+                return static_cast<canid_t>(value) & CAN_EFF_FLAG;
             }
 
         public: // +++ Getters +++
-            bool hasErrorFrameFlag() const { return _isErrorFrame; }
-            bool hasRtrFrameFlag() const { return _isRemoteTransmissionRequest; }
-            bool isStandardFrameId() const { return _isStandardFrameId; }
-            bool isExtendedFrameId() const { return _isExtendedFrameId; }
+            constexpr bool hasErrorFrameFlag() const { return isErrorFrame(m_identifier); } //!< Indicates whether or not this ID is an error frame.
+            constexpr bool hasRtrFrameFlag() const { return isRemoteTransmissionRequest(m_identifier); } //!< Indicates whether or not this ID is a remote transmission request.
+            constexpr bool isStandardFrameId() const { return !isExtendedFrame(m_identifier); } //!< Indicates whether or not this ID is a standard frame ID.
+            constexpr bool isExtendedFrameId() const { return isExtendedFrame(m_identifier); } //!< Indicates whether or not this ID is an extended frame ID.
 
         public: // +++ Equality Checks +++
-            bool equals(CanId otherId) const { return *this == otherId; }
+            constexpr bool equals(const CanId& otherId) const { return m_identifier == otherId.m_identifier; } //!< Compares this ID to another.
 
         private: // +++ Variables +++
-            bool _isErrorFrame = false;
-            bool _isRemoteTransmissionRequest = false;
-            bool _isStandardFrameId = false;
-            bool _isExtendedFrameId = false;
-
-            uint32_t _identifier = 0;
+            uint32_t m_identifier = 0;
     };
 
 }
