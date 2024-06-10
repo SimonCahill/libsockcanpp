@@ -28,7 +28,9 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(
     ${PROJECT_NAME}
 
-    sockcanpp
+    sockcanpp_test
     ${GTEST_LIBRARIES}
     pthread
 )
+
+gtest_discover_tests(${PROJECT_NAME})

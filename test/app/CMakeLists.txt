@@ -9,7 +9,9 @@ include_directories(
     include/
 )
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/libsockcanpp)
+if (NOT TARGET sockcanpp)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_CURRENT_BINARY_DIR}/libsockcanpp)
+endif()
 
 file(GLOB_RECURSE FILES ${CMAKE_CURRENT_SOURCE_DIR} src/*.cpp)
 
@@ -20,7 +22,7 @@ target_link_libraries(
     ${TARGET_NAME}
 
     # Libs
-    sockcanpp
+    sockcanpp_test
     -lm
 
     -static
