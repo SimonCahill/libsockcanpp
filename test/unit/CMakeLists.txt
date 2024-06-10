@@ -21,6 +21,7 @@ add_compile_options(
     -Wextra
     -Wpedantic
     -Werror
+    -Wno-unknown-pragmas
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
