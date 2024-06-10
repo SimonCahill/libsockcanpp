@@ -23,7 +23,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt-get update
-        sudo apt-get -y install can-utils libsocketcan-dev
+        sudo apt-get -y install can-utils libsocketcan-dev googletest
         while read -r cmd
         do
           eval sudo $cmd
