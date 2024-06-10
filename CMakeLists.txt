@@ -1,15 +1,27 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(sockcanpp LANGUAGES CXX VERSION 1.0)
+project(sockcanpp LANGUAGES CXX VERSION 1.1.0)
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
+option(BUILD_TESTS "Build the tests" OFF)
 
 set(CMAKE_CXX_STANDARD 11)
 include(GNUInstallDirs)
 
-add_library(${PROJECT_NAME})
-set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
-set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+if (BUILD_SHARED_LIBS STREQUAL "ON")
+    add_library(${PROJECT_NAME})
+    set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
+    set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+else()
+    add_library(${PROJECT_NAME} STATIC)
+endif()
+
+###
+# If BUILD_TESTS is set to ON, a static test library with the name of the project suffixed with "_test" will be created
+###
+if(BUILD_TESTS STREQUAL "ON")
+    add_library(${PROJECT_NAME}_test STATIC)
+endif()
 
 add_subdirectory(include)
 add_subdirectory(src)
@@ -58,3 +70,11 @@ add_custom_command(
         COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+###
+# If the CMAKE_BUILD_TYPE is set to Debug, enable the tests
+###
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND BUILD_TESTS STREQUAL "ON")
+    enable_testing()
+    add_subdirectory(test)
+endif()

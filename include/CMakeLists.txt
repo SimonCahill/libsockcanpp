@@ -8,3 +8,14 @@ target_sources(${PROJECT_NAME}
         CanId.hpp
         CanMessage.hpp
 )
+
+if (TARGET sockcanpp_test)
+    target_sources(sockcanpp_test
+        PUBLIC FILE_SET HEADERS
+        BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
+        FILES 
+            CanDriver.hpp
+            CanId.hpp
+            CanMessage.hpp
+    )
+endif()
