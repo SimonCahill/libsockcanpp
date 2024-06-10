@@ -9,3 +9,7 @@ if (TARGET sockcanpp_test)
         ${CMAKE_CURRENT_LIST_DIR}/CanDriver.cpp
     )
 endif()
+
+add_compile_options(
+    -Wno-unknown-pragmas
+)
