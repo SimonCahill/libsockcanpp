@@ -1,6 +1,6 @@
 /**
  * @file CanMessage.hpp
- * @author Simon Cahill (simonc@online.de)
+ * @author Simon Cahill (contact@simonc.eu)
  * @brief Contains the implementation of a CAN message representation in C++.
  * @version 0.1
  * @date 2020-07-01

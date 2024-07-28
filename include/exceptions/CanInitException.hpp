@@ -1,6 +1,6 @@
 /**
  * @file CanInitException.hpp
- * @author Simon Cahill (simonc@online.de)
+ * @author Simon Cahill (contact@simonc.eu)
  * @brief Contains the implementation of an exception that is thrown when a CAN socket couldn't be inintialised.
  * @version 0.1
  * @date 2020-07-02

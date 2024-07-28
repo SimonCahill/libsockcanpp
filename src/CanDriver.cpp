@@ -1,6 +1,6 @@
 /**
  * @file CanDriver.cpp
- * @author Simon Cahill (simonc@online.de)
+ * @author Simon Cahill (contact@simonc.eu)
  * @brief
  * @version 0.1
  * @date 2020-07-01

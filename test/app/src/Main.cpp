@@ -1,6 +1,6 @@
 /**
  * @file Main.cpp
- * @author Simon Cahill (simonc@online.de)
+ * @author Simon Cahill (contact@simonc.eu)
  * @brief Contains the implementation of a test application using this library.
  * @version 0.1
  * @date 2020-07-02
