@@ -1,6 +1,6 @@
 /**
  * @file CanId.hpp
- * @author Simon Cahill (simonc@online.de)
+ * @author Simon Cahill (contact@simonc.eu)
  * @brief Contains the implementation of a value-type representing a CAN identifier.
  * @version 0.1
  * @date 2020-07-01

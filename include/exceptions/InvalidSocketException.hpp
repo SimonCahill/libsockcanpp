@@ -1,6 +1,6 @@
 /**
  * @file InvalidSocketException.hpp
- * @author Simon Cahill (simonc@online.de)
+ * @author Simon Cahill (contact@simonc.eu)
  * @brief Contains the implementation of an exception that may be thrown when an invalid CAN socket is detected.
  * @version 0.1
  * @date 2020-07-02
