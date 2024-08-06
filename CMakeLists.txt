@@ -31,13 +31,13 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.23")
         EXPORT ${PROJECT_NAME}Targets
         FILE_SET HEADERS
     )
-endif()
 
-install(EXPORT ${PROJECT_NAME}Targets
-    FILE ${PROJECT_NAME}Targets.cmake
-    NAMESPACE ${PROJECT_NAME}::
-    DESTINATION lib/cmake/${PROJECT_NAME}
-)
+    install(EXPORT ${PROJECT_NAME}Targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION lib/cmake/${PROJECT_NAME}
+    )
+endif()
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
