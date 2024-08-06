@@ -26,10 +26,12 @@ endif()
 add_subdirectory(include)
 add_subdirectory(src)
 
-install(TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}Targets
-    FILE_SET HEADERS
-)
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.23")
+    install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}Targets
+        FILE_SET HEADERS
+    )
+endif()
 
 install(EXPORT ${PROJECT_NAME}Targets
     FILE ${PROJECT_NAME}Targets.cmake
