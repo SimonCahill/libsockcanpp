@@ -43,6 +43,7 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <vector>
 
 //////////////////////////////
 //      LOCAL  INCLUDES     //
@@ -70,23 +71,27 @@ namespace sockcanpp {
     using std::unique_ptr;
     using std::chrono::milliseconds;
     using std::this_thread::sleep_for;
+    using std::vector;
 
     //////////////////////////////////////
     //      PUBLIC IMPLEMENTATION       //
     //////////////////////////////////////
 
 
-#pragma region Object Construction
+#pragma region "Object Construction"
     CanDriver::CanDriver(const string& canInterface, int32_t canProtocol, const CanId defaultSenderId):
-        CanDriver(canInterface, canProtocol, 0 /* match all */, defaultSenderId) {}
+        CanDriver(canInterface, canProtocol, 0 /* match all */, defaultSenderId) { }
 
     CanDriver::CanDriver(const string& canInterface, const int32_t canProtocol, const int32_t filterMask, const CanId defaultSenderId):
-        _defaultSenderId(defaultSenderId), _canFilterMask(filterMask), _canProtocol(canProtocol), _canInterface(canInterface) {
+        CanDriver(canInterface, canProtocol, filtermap_t{{0, filterMask}}, defaultSenderId) { }
+
+    CanDriver::CanDriver(const string& canInterface, const int32_t canProtocol, const filtermap_t& filters, const CanId defaultSenderId):
+        _defaultSenderId(defaultSenderId), _canFilterMask(filters), _canProtocol(canProtocol), _canInterface(canInterface) {
         initialiseSocketCan();
     }
 #pragma endregion
 
-#pragma region I / O
+#pragma region "I / O"
     /**
      * @brief Blocks until one or more CAN messages appear on the bus, or until the timeout runs out.
      *
@@ -125,9 +130,7 @@ namespace sockcanpp {
      *
      * @return CanMessage The message read from the bus.
      */
-    CanMessage CanDriver::readMessage() {
-	return readMessageLock();
-    }
+    CanMessage CanDriver::readMessage() { return readMessageLock(); }
 
     /**
      * @brief readMessage deadlock guard, attempts to read a message from the associated CAN bus.
@@ -137,9 +140,7 @@ namespace sockcanpp {
     CanMessage CanDriver::readMessageLock(bool const lock) {
         unique_ptr<unique_lock<mutex>> locky{nullptr};
 
-        if (lock) {
-	        locky = unique_ptr<unique_lock<mutex>>{new unique_lock<mutex>{_lock}};
-        }
+        if (lock) { locky = unique_ptr<unique_lock<mutex>>{new unique_lock<mutex>{_lock}}; }
         
         if (0 > _socketFd) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
@@ -229,21 +230,37 @@ namespace sockcanpp {
      * @brief Attempts to set the filter mask for the associated CAN bus.
      *
      * @param mask The bit mask to apply.
+     * @param filterId The ID to filter on.
      */
-    void CanDriver::setCanFilterMask(const int32_t mask) {
+    void CanDriver::setCanFilterMask(const int32_t mask, const CanId& filterId) {
+        setCanFilters({{filterId, static_cast<uint32_t>(mask)}});
+    }
+
+    /**
+     * @brief Sets multiple CAN filters for the associated CAN bus.
+     *
+     * @param filters A map containing the filters to apply.
+     */
+    void CanDriver::setCanFilters(const filtermap_t& filters) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
         unique_lock<mutex> locky(_lock);
-        can_filter canFilter;
+        vector<can_filter> canFilters{};
 
-        canFilter.can_id   = _defaultSenderId;
-        canFilter.can_mask = mask;
-
-        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_FILTER, &canFilter, sizeof(canFilter)) == -1) {
-            throw CanInitException(formatString("FAILED to set CAN filter mask %x on socket %d! Error: %d => %s", mask, _socketFd, errno, strerror(errno)));
+        // Structured bindings only available with C++17
+        #if __cplusplus >= 201703L
+        for (const auto [id, filter] : filters) {
+            canFilters.push_back({id, filter});
         }
+        #else
+        for (const auto& filterPair : filters) {
+            canFilters.push_back({filterPair.first, filterPair.second});
+        }
+        #endif
 
-        _canFilterMask = mask;
+        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_FILTER, canFilters.data(), canFilters.size() * sizeof(can_filter)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN filters on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        }
     }
 #pragma endregion
 
@@ -287,7 +304,7 @@ namespace sockcanpp {
         address.can_family = AF_CAN;
         address.can_ifindex = ifaceRequest.ifr_ifindex;
 
-        setCanFilterMask(_canFilterMask);
+        setCanFilters(_canFilterMask);
 
         if ((tmpReturn = bind(_socketFd, (struct sockaddr*)&address, sizeof(address))) == -1) {
             throw CanInitException(formatString("FAILED to bind to socket CAN! Error: %d => %s", errno, strerror(errno)));
