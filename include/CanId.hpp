@@ -224,6 +224,14 @@ namespace sockcanpp {
             uint32_t m_identifier = 0;
     };
 
+    /**
+     * @brief Implements a hash function for the CanId type.
+     */
+    struct CanIdHasher {
+        public:
+            size_t operator()(const CanId& id) const { return std::hash<canid_t>()(*id); }
+    };
+
 }
 
 #endif // LIBSOCKPP_INCLUDE_CANID_HPP
