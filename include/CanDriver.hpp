@@ -32,6 +32,7 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 //////////////////////////////
 //      LOCAL  INCLUDES     //
@@ -50,6 +51,9 @@ namespace sockcanpp {
     using std::mutex;
     using std::string;
     using std::queue;
+    using std::unordered_map;
+
+    using filtermap_t = unordered_map<CanId, uint32_t, CanIdHasher>;
 
     /**
      * @brief CanDriver class; handles communication via CAN.
@@ -68,50 +72,55 @@ namespace sockcanpp {
         public: // +++ Constructor / Destructor +++
             CanDriver(const string& canInterface, const int32_t canProtocol, const CanId defaultSenderId = 0); //!< Constructor
             CanDriver(const string& canInterface, const int32_t canProtocol, const int32_t filterMask, const CanId defaultSenderId = 0);
+            CanDriver(const string& canInterface, const int32_t canProtocol, const filtermap_t& filters, const CanId defaultSenderId = 0);
             CanDriver() = default;
             virtual ~CanDriver() { uninitialiseSocketCan(); } //!< Destructor
 
         public: // +++ Getter / Setter +++
-            CanDriver& setDefaultSenderId(const CanId id) { this->_defaultSenderId = id; return *this; } //!< Sets the default sender ID
+            CanDriver&                  setDefaultSenderId(const CanId id) { this->_defaultSenderId = id; return *this; } //!< Sets the default sender ID
 
-            CanId getDefaultSenderId() const { return this->_defaultSenderId; } //!< Gets the default sender ID
+            CanId                       getDefaultSenderId() const { return this->_defaultSenderId; } //!< Gets the default sender ID
 
-            int32_t getFilterMask() const { return this->_canFilterMask; } //!< Gets the filter mask used by this instance
-            int32_t getMessageQueueSize() const { return this->_queueSize; } //!< Gets the amount of CAN messages found after last calling waitForMessages()
-            int32_t getSocketFd() const { return this->_socketFd; } //!< The socket file descriptor used by this instance.
+            filtermap_t                 getFilterMask() const { return this->_canFilterMask; } //!< Gets the filter mask used by this instance
+            int32_t                     getMessageQueueSize() const { return this->_queueSize; } //!< Gets the amount of CAN messages found after last calling waitForMessages()
+            int32_t                     getSocketFd() const { return this->_socketFd; } //!< The socket file descriptor used by this instance.
 
         public: // +++ I/O +++
-            virtual bool waitForMessages(milliseconds timeout = milliseconds(3000)); //!< Waits for CAN messages to appear
+            virtual bool                waitForMessages(milliseconds timeout = milliseconds(3000)); //!< Waits for CAN messages to appear
 
-            virtual CanMessage readMessage(); //!< Attempts to read a single message from the bus
+            virtual CanMessage          readMessage(); //!< Attempts to read a single message from the bus
 
-            virtual ssize_t sendMessage(const CanMessage& message, bool forceExtended = false); //!< Attempts to send a single CAN message
-            virtual ssize_t sendMessageQueue(queue<CanMessage> messages,
-                                     milliseconds delay = milliseconds(20), bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessage(const CanMessage& message, bool forceExtended = false); //!< Attempts to send a single CAN message
+            virtual ssize_t             sendMessageQueue(queue<CanMessage> messages, milliseconds delay = milliseconds(20), bool forceExtended = false); //!< Attempts to send a queue of messages
              
-            virtual queue<CanMessage> readQueuedMessages(); //!< Attempts to read all queued messages from the bus
+            virtual queue<CanMessage>   readQueuedMessages(); //!< Attempts to read all queued messages from the bus
 
-            virtual void setCanFilterMask(const int32_t mask); //!< Attempts to set a new CAN filter mask to the BIOS
+            virtual void                setCanFilterMask(const int32_t mask, const CanId& filterId); //!< Attempts to set a new CAN filter mask to the interface
+            virtual void                setCanFilters(const filtermap_t& filters); //!< Sets the CAN filters for the interface
 
         protected: // +++ Socket Management +++
-            virtual void initialiseSocketCan(); //!< Initialises socketcan
-            virtual void uninitialiseSocketCan(); //!< Uninitialises socketcan
+            virtual void                initialiseSocketCan(); //!< Initialises socketcan
+            virtual void                uninitialiseSocketCan(); //!< Uninitialises socketcan
 
-        private:
-            virtual CanMessage readMessageLock(bool const lock = true); //!< readMessage deadlock guard
-            CanId _defaultSenderId; //!< The ID to send messages with if no other ID was set.
+        private: // +++ Member Functions +++
+            virtual CanMessage          readMessageLock(bool const lock = true); //!< readMessage deadlock guard
 
-            int32_t _canFilterMask; //!< The bit mask used to filter CAN messages
-            int32_t _canProtocol; //!< The protocol used when communicating via CAN
-            int32_t _socketFd{-1}; //!< The CAN socket file descriptor
-            int32_t _queueSize{0}; ///!< The size of the message queue read by waitForMessages()
+        private: // +++ Variables +++
+            
+            CanId       _defaultSenderId; //!< The ID to send messages with if no other ID was set.
+
+            filtermap_t _canFilterMask; //!< The bit mask used to filter CAN messages
+            
+            int32_t     _canProtocol; //!< The protocol used when communicating via CAN
+            int32_t     _socketFd{-1}; //!< The CAN socket file descriptor
+            int32_t     _queueSize{0}; ///!< The size of the message queue read by waitForMessages()
 
             //!< Mutex for thread-safety.
-            mutex _lock{};
-            mutex _lockSend{}; 
+            mutex       _lock{};
+            mutex       _lockSend{}; 
 
-            string _canInterface; //!< The CAN interface used for communication (e.g. can0, can1, ...)
-
+            string      _canInterface; //!< The CAN interface used for communication (e.g. can0, can1, ...)
+            
     };
 
     
