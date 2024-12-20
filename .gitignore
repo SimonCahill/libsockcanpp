@@ -5,7 +5,7 @@
 ###
 # Build directories
 ###
-build/
+build*/
 
 ###
 # Documentation (Doxygen)
