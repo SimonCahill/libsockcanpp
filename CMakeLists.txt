@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(sockcanpp LANGUAGES CXX VERSION 1.1.0)
+project(sockcanpp LANGUAGES CXX VERSION 1.2.0)
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
 option(BUILD_TESTS "Build the tests" OFF)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 11)
 include(GNUInstallDirs)
@@ -21,6 +23,7 @@ endif()
 ###
 if(BUILD_TESTS STREQUAL "ON")
     add_library(${PROJECT_NAME}_test STATIC)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
 endif()
 
 add_subdirectory(include)
