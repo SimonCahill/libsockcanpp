@@ -65,9 +65,9 @@ include(cmake/cpack.cmake)
 ###
 # Docs target
 ###
-add_custom_target("docs" COMMENT "Create Doxygen documentation")
+add_custom_target("libsockcan_docs" COMMENT "Create Doxygen documentation")
 add_custom_command(
-    TARGET "docs"
+    TARGET "libsockcan_docs"
     POST_BUILD
         COMMENT "Generate Doxygen documentation for publication or reading"
         COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
