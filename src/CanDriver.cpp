@@ -26,16 +26,8 @@
 //////////////////////////////
 //      SYSTEM INCLUDES     //
 //////////////////////////////
-
-#include <fcntl.h>
-#include <linux/can.h>
-#include <linux/can/raw.h>
-#include <net/if.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
+// stl
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -44,6 +36,22 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+// libc
+#include <fcntl.h>
+#include <ifaddrs.h>
+#include <linux/can.h>
+#include <linux/can/netlink.h>
+#include <linux/can/raw.h>
+#include <linux/rtnetlink.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+// mnl
+#include <libmnl/libmnl.h>
 
 //////////////////////////////
 //      LOCAL  INCLUDES     //
@@ -63,6 +71,7 @@ namespace sockcanpp {
     using exceptions::CanInitException;
     using exceptions::InvalidSocketException;
 
+    using std::array;
     using std::mutex;
     using std::queue;
     using std::string;
@@ -77,6 +86,93 @@ namespace sockcanpp {
     //      PUBLIC IMPLEMENTATION       //
     //////////////////////////////////////
 
+    bool CanDriver::setInterfaceUp(const string& interface, const size_t bitrate) {
+        if (interface.empty()) { throw CanInitException("Interface name cannot be empty!"); }
+
+        auto flags = 0;
+        flags |= IFF_UP;
+        time_t sequence = time(nullptr);
+
+        char mnlBuffer[MNL_SOCKET_BUFFER_SIZE];
+        memset(mnlBuffer, 0, MNL_SOCKET_BUFFER_SIZE);
+
+        auto nlHeader = mnl_nlmsg_put_header(mnlBuffer);
+        nlHeader->nlmsg_type = RTM_NEWLINK;
+        nlHeader->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+        nlHeader->nlmsg_seq = sequence;
+
+        auto ifaceInfoMsg = static_cast<ifinfomsg*>(mnl_nlmsg_put_extra_header(nlHeader, sizeof(ifinfomsg)));
+        ifaceInfoMsg->ifi_family = AF_CAN;
+        ifaceInfoMsg->ifi_change = flags;
+        ifaceInfoMsg->ifi_flags = flags;
+
+        mnl_attr_put_str(nlHeader, IFLA_IFNAME, interface.c_str());
+
+        auto canInfo = mnl_attr_nest_start(nlHeader, IFLA_LINKINFO);
+        mnl_attr_put_str(nlHeader, IFLA_INFO_KIND, "can");
+
+        auto canData = mnl_attr_nest_start(nlHeader, IFLA_INFO_DATA);
+        mnl_attr_put_u32(nlHeader, IFLA_CAN_BITTIMING, bitrate);
+
+        mnl_attr_nest_end(nlHeader, canData);
+
+        auto nlSocket = mnl_socket_open(NETLINK_ROUTE);
+        if (nlSocket == nullptr) { throw CanInitException("FAILED to open netlink socket!"); }
+
+        if (mnl_socket_bind(nlSocket, 0, MNL_SOCKET_AUTOPID) == -1) {
+            mnl_socket_close(nlSocket);
+            throw CanInitException("FAILED to bind netlink socket!");
+        }
+
+        const auto portId = mnl_socket_get_portid(nlSocket);
+
+        #ifdef sockcanpp_DEBUG
+        mnl_nlmsg_fprintf(stdout, nlHeader, nlHeader->nlmsg_len, sizeof(ifinfomsg));
+        #endif
+
+        if (mnl_socket_sendto(nlSocket, nlHeader, nlHeader->nlmsg_len) == -1) {
+            mnl_socket_close(nlSocket);
+            throw CanInitException("FAILED to send netlink message!");
+        }
+
+        auto nlResponse = mnl_socket_recvfrom(nlSocket, mnlBuffer, MNL_SOCKET_BUFFER_SIZE);
+
+        if (nlResponse == -1) {
+            mnl_socket_close(nlSocket);
+            throw CanInitException("FAILED to receive netlink response!");
+        }
+
+        nlResponse = mnl_cb_run(mnlBuffer, nlResponse, sequence, portId, nullptr, nullptr);
+
+        if (nlResponse == -1 && errno != 0) {
+            mnl_socket_close(nlSocket);
+            throw CanInitException("FAILED to run netlink callback! Error: " + string{strerror(errno)});
+        }
+
+        mnl_socket_close(nlSocket);
+
+        return nlResponse == MNL_CB_OK;
+    }
+
+    vector<string> CanDriver::getAvailableInterfaces() {
+        vector<string> interfaces{};
+
+        ifaddrs* ifaceList{};
+        ifaddrs* iface{};
+
+        if (getifaddrs(&ifaceList) < 0) { throw CanException("FAILED to get interface list!", "*"); }
+
+        iface = ifaceList;
+
+        do {
+            if ((iface->ifa_addr && iface->ifa_addr->sa_family == AF_CAN) || string{iface->ifa_name}.find("can") != string::npos) {
+                interfaces.push_back(iface->ifa_name);
+            }
+        } while ((iface = iface->ifa_next) != nullptr);
+
+        return interfaces;
+    }
+        
 
 #pragma region "Object Construction"
     CanDriver::CanDriver(const string& canInterface, int32_t canProtocol, const CanId defaultSenderId):

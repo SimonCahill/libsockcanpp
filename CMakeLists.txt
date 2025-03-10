@@ -10,6 +10,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 11)
 include(GNUInstallDirs)
 
+include(cmake/dependencies.cmake)
+
+###
+# Set debug/release flags
+###
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Dsockcanpp_DEBUG -O0 -g")
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+
 if (BUILD_SHARED_LIBS STREQUAL "ON")
     add_library(${PROJECT_NAME})
     set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
@@ -22,12 +31,18 @@ endif()
 # If BUILD_TESTS is set to ON, a static test library with the name of the project suffixed with "_test" will be created
 ###
 if(BUILD_TESTS STREQUAL "ON")
+    enable_testing()
+
     add_library(${PROJECT_NAME}_test STATIC)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
+
+    target_link_libraries(${PROJECT_NAME}_test PUBLIC sockcanpp::libmnl)
 endif()
 
 add_subdirectory(include)
 add_subdirectory(src)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC sockcanpp::libmnl)
 
 install(TARGETS ${PROJECT_NAME}
     EXPORT ${PROJECT_NAME}Targets
@@ -73,11 +88,3 @@ add_custom_command(
         COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
-###
-# If the CMAKE_BUILD_TYPE is set to Debug, enable the tests
-###
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND BUILD_TESTS STREQUAL "ON")
-    enable_testing()
-    add_subdirectory(test)
-endif()

@@ -38,19 +38,23 @@ namespace sockcanpp { namespace exceptions {
      */
     class CanException: public exception {
         public: // +++ Constructor / Destructor +++
-            CanException(string message, int32_t socket): _message(message), _socket(socket) {}
-            ~CanException() {}
+            CanException(const string& message, const string& interface): m_socket(-1), m_interface(interface), m_message(message) {}
+            CanException(const string& message, int32_t socket): m_socket(socket), m_interface({}), m_message(message) {}
+            ~CanException() = default;
 
         public: // +++ Overrides +++
-            const char* what() { return _message.c_str(); }
+            const char* what() { return m_message.c_str(); }
 
         public: // +++ Getter +++
-            const int32_t getSocket() const { return _socket; }
+            const int32_t getSocket() const { return m_socket; }
+            
+            const string getInterface() const { return m_interface; }
 
         private:
-            int32_t _socket;
+            int32_t m_socket;
 
-            string _message;
+            string m_interface;
+            string m_message;
     };
 
 } /* exceptions */ } /* sockcanpp */

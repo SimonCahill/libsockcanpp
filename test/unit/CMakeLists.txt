@@ -29,6 +29,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(
     ${PROJECT_NAME}
 
+    sockcanpp::libmnl
     sockcanpp_test
     ${GTEST_LIBRARIES}
     pthread

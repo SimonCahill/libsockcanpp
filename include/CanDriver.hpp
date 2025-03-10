@@ -33,6 +33,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 //////////////////////////////
 //      LOCAL  INCLUDES     //
@@ -52,8 +53,18 @@ namespace sockcanpp {
     using std::string;
     using std::queue;
     using std::unordered_map;
+    using std::vector;
 
     using filtermap_t = unordered_map<CanId, uint32_t, CanIdHasher>;
+    
+    static constexpr size_t CAN_BITRATE_1M       = 1000000; //!< 1Mbit/s
+    static constexpr size_t CAN_BITRATE_500K     = 500000; //!< 500kbit/s
+    static constexpr size_t CAN_BITRATE_250K     = 250000; //!< 250kbit/s
+    static constexpr size_t CAN_BITRATE_125K     = 125000; //!< 125kbit/s
+
+    static constexpr size_t CAN_BITRATE_ISOBUS   = CAN_BITRATE_250K; //!< ISOBUS standard bitrate
+    static constexpr size_t CAN_BITRATE_J1939    = CAN_BITRATE_250K; //!< J1939 standard bitrate
+    static constexpr size_t CAN_BITRATE_OBD2     = CAN_BITRATE_500K; //!< OBD2 standard bitrate
 
     /**
      * @brief CanDriver class; handles communication via CAN.
@@ -68,6 +79,10 @@ namespace sockcanpp {
             static constexpr int32_t CAN_MAX_DATA_LENGTH = 8; //!< The maximum amount of bytes allowed in a single CAN frame
             static constexpr int32_t CAN_SOCK_RAW        = CAN_RAW; //!< The raw CAN protocol
             static constexpr int32_t CAN_SOCK_SEVEN      = 7; //!< A separate CAN protocol, used by certain embedded device OEMs.
+
+            static bool setInterfaceUp(const string& interface, const size_t bitrate); //!< Sets the specified CAN interface up with the specified bitrate
+
+            static vector<string> getAvailableInterfaces(); //!< Gets a list of available CAN interfaces
 
         public: // +++ Constructor / Destructor +++
             CanDriver(const string& canInterface, const int32_t canProtocol, const CanId defaultSenderId = 0); //!< Constructor
