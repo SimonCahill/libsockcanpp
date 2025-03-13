@@ -28,11 +28,26 @@
 //////////////////////////////
 //      SYSTEM INCLUDES     //
 //////////////////////////////
+#include <algorithm>
 #include <bitset>
 #include <cmath>
 #include <exception>
 #include <linux/can.h>
 #include <system_error>
+
+#if __cpp_concepts >= 201907
+template<typename Str>
+concept Stringable = requires(Str s) { { s.data() + s.size() } -> std::convertible_to<const char*>; };
+
+template<typename CharArr>
+concept CChar = requires(CharArr c) { std::is_same_v<CharArr, const char*>; };
+
+template<typename Int>
+concept Integral = requires(Int i) { std::is_integral_v<Int>; };
+
+template<typename C>
+concept ConvertibleToCanId = Stringable<C> || Integral<C> || CChar<C>;
+#endif
 
 namespace sockcanpp {
 
@@ -47,10 +62,16 @@ namespace sockcanpp {
      */
     struct CanId {
         public: // +++ Constructors +++
-            constexpr CanId(const CanId& id) = default;
             constexpr CanId() = default;
             constexpr CanId(const canid_t id): m_identifier(id) { }
             constexpr CanId(const int32_t id): m_identifier(id) { }
+
+            #if __cpp_concepts >= 201907
+            template<Stringable T>
+            CanId(const T& id) { m_identifier = std::stoul(id.data(), nullptr, 16); }
+            #endif // __cpp_concepts >= 201907
+
+            CanId(const char* id) { m_identifier = std::stoul(id, nullptr, 16); }
 
         public: // +++ Operators +++
             constexpr canid_t operator *() const { return m_identifier; } //!< Returns the raw CAN ID value.
@@ -122,6 +143,13 @@ namespace sockcanpp {
 #pragma region "Assignment Operators"
         template<typename T>
         constexpr CanId operator =(const T val) { return CanId(val); } //!< Assigns a new integer to this CanID
+
+        #if __cpp_concepts >= 201907
+        template<Stringable T>
+        CanId operator =(const T& val) {
+            return operator=(std::stoul(val.data(), nullptr, 16));
+        }
+        #endif // __cpp_concepts >= 201907
 
         constexpr CanId operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
 #pragma endregion
