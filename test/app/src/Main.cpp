@@ -50,14 +50,15 @@ int main(int32_t argCount, char** argValues) {
 
     if (argCount > 2) {
         for (int32_t i = 1; i < argCount; i++) {
-            if (argValues[i] == "--help" || argValues[i] == "-h") {
+            string arg{argValues[i]};
+            if (arg == "--help" || arg == "-h") {
                 printHelp(argValues[0]);
                 return 0;
-            } else if (argValues[i] == "-protocol") {
+            } else if (arg == "-protocol") {
                 desiredCanSocket = atoi(argValues[i + 1]);
                 i += 1;
                 continue;
-            } else if (argValues[i] == "-iface") {
+            } else if (arg == "-iface") {
                 canInterface = (argValues[i + 1]);
                 i += 1;
                 continue;
@@ -70,12 +71,12 @@ int main(int32_t argCount, char** argValues) {
     if (canInterface == "")
         canInterface = "can0";
 
-    CanDriver* canDriver;
+    CanDriver* canDriver{nullptr};
     try {
         canDriver = new CanDriver(canInterface, CAN_RAW);
     } catch (CanInitException& ex) {
         cerr << "An error occurred while initialising CanDriver: " << ex.what() << endl;
-        delete canDriver;
+        if (canDriver) { delete canDriver; }
         return -1;
     }
 

@@ -14,6 +14,8 @@
 
 using sockcanpp::CanId;
 
+using std::string;
+
 TEST(CanIdTests, CanId_invalidId_ExpectFalse) {
     ASSERT_FALSE(CanId::isValidIdentifier(-1));
 }
@@ -276,3 +278,48 @@ TEST(CanIdTests, CanId_ArithmeticOperatorModuloEquals_ExpectTrue) {
     id %= 2;
     ASSERT_EQ(id, 1);
 }
+
+#if __cpp_concepts >= 201907
+
+TEST(CanIdTests, CanId_TestStringToCanIdConversion_ExpectTrue) {
+    string id{"0x123"};
+
+    EXPECT_NO_THROW(CanId canId(id));
+    EXPECT_NO_THROW(CanId canId{id});
+    EXPECT_NO_THROW(CanId canId = id; (void)canId;);
+    EXPECT_NO_THROW(CanId canId{"0x123"});
+
+    CanId canId(id);
+    ASSERT_EQ(canId, 0x123);
+}
+
+TEST(CanIdTests, CanId_TestStringToCanIdConversion_ExpectTrue_ExplicitCast) {
+    string id{"0x123"};
+
+    EXPECT_NO_THROW(CanId canId(static_cast<const char*>(id.c_str())));
+    EXPECT_NO_THROW(CanId canId = static_cast<const char*>(id.c_str()); (void)canId;);
+    EXPECT_NO_THROW(CanId canId = static_cast<const char*>(id.c_str()); (void)canId;);
+
+    CanId canId(static_cast<const char*>(id.c_str()));
+    ASSERT_EQ(canId, 0x123);
+}
+
+TEST(CanIdTests, CanId_TestStringToCanIdConversion_ExpectTrue_ImplicitCast) {
+    string id{"0x123"};
+
+    EXPECT_NO_THROW(CanId canId = id; (void)canId;);
+    EXPECT_NO_THROW(CanId canId = id; (void)canId;);
+
+    CanId canId = id;
+    ASSERT_EQ(canId, 0x123);
+}
+
+TEST(CanIdTests, CanId_TestStringToCanIdConversion_ExpectError) {
+    string id{"hello_world"};
+
+    EXPECT_THROW(CanId canId(id), std::invalid_argument);
+    EXPECT_THROW(CanId canId = id; (void)canId;, std::invalid_argument);
+    EXPECT_THROW(CanId canId = id; (void)canId;, std::invalid_argument);
+}
+
+#endif // __cpp_concepts >= 201907
