@@ -44,6 +44,8 @@ namespace sockcanpp { namespace exceptions {
         public: // +++ Override +++
             const char* what() { return _message.c_str(); }
 
+            string      getMessage() const { return _message; }
+
         private:
             string _message;
     };
