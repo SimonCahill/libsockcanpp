@@ -38,19 +38,19 @@ namespace sockcanpp { namespace exceptions {
      */
     class InvalidSocketException: public exception {
         public: // +++ Constructor / Destructor +++
-            InvalidSocketException(string message, int32_t socket): _message(message), _socket(socket) {}
+            InvalidSocketException(const string& message, int32_t socket): m_socket(socket), m_message(message) {}
             ~InvalidSocketException() {}
 
         public: // +++ Overrides +++
-            const char* what() { return _message.c_str(); }
+            const char* what() { return m_message.c_str(); }
 
         public: // +++ Getter +++
-            const int32_t getSocket() const { return _socket; }
+            const int32_t getSocket() const { return m_socket; }
 
         private:
-            int32_t _socket;
+            int32_t m_socket;
 
-            string _message;
+            string m_message;
     };
 
 } /* exceptions */ } /* sockcanpp */
