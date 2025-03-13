@@ -13,6 +13,12 @@ libsockcanpp is a socketcan wrapper library for C++, aimed to be easy to use wit
 
 ## Building
 
+> **C++11** SUPPORT:  
+> This library supports modern C++ features, such as concepts in certain places.
+> If your project cannot support C++20 features, you can force the C++ standard back by setting  
+> `-Dsockcanpp_CONCEPT_SUPPORT=OFF` in the command-line or `set(sockcanpp_CONCEPT_SUPPORT OFF CACHE BOOL "Force C++ standard back to 11")`  
+> in your CMakeLists.txt.
+
 libsockcanpp was designed with use in CMake projects, but it can also easily be integrated into existing Makefile projects, as long as cmake is present on the build system.
 
 1) clone the repository: `git clone https://github.com/SimonCahill/libsockcanpp.git`
@@ -26,6 +32,9 @@ libsockcanpp was designed with use in CMake projects, but it can also easily be 
 2) add the following to CMakeLists.txt
 ```cmake
 if (NOT TARGET sockcanpp)
+    # IF you need C++11 support:
+    # set(sockcanpp_CONCEPT_SUPPORT OFF CACHE BOOL "Force C++ standard back to 11")
+
     add_subdirectory(/path/to/libsockcanpprepo ${CMAKE_CURRENT_BUILD_DIR}/libsockcanpp)
 endif()
 
