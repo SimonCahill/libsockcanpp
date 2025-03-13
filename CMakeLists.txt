@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(sockcanpp LANGUAGES CXX VERSION 1.2.0)
+project(sockcanpp LANGUAGES CXX VERSION 1.3.0)
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" ON)
 option(BUILD_TESTS "Build the tests" OFF)
