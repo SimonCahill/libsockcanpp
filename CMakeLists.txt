@@ -7,7 +7,24 @@ option(BUILD_TESTS "Build the tests" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_STANDARD 11)
+option(sockcanpp_CONCEPT_SUPPORT "Allow higher level language support" ON)
+
+if (sockcanpp_CONCEPT_SUPPORT)
+    message(STATUS "Enabling support for higher level language features")
+    set(CMAKE_CXX_STANDARD 20)
+else()
+    set(CMAKE_CXX_STANDARD 11)
+endif()
+
+add_compile_options(
+    -Wall
+    -Werror
+    -Wpedantic
+)
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -s")
+
 include(GNUInstallDirs)
 
 if (BUILD_SHARED_LIBS STREQUAL "ON")
