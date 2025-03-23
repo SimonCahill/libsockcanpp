@@ -13,6 +13,7 @@ libsockcanpp is a socketcan wrapper library for C++, aimed to be easy to use wit
 
 ## Building
 
+> [!NOTE]
 > **C++11** SUPPORT:  
 > This library supports modern C++ features, such as concepts in certain places.
 > If your project cannot support C++20 features, you can force the C++ standard back by setting  
