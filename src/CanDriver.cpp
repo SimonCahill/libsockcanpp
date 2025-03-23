@@ -95,20 +95,19 @@ namespace sockcanpp {
     /**
      * @brief Blocks until one or more CAN messages appear on the bus, or until the timeout runs out.
      *
-     * @param timeout The time (in millis) to wait before timing out.
+     * @param timeout The time (in µsec) to wait before timing out.
      *
      * @return true If messages are available on the bus.
      * @return false Otherwise.
      */
-    bool CanDriver::waitForMessages(milliseconds timeout) {
+    bool CanDriver::waitForMessages(microseconds timeout/* = microseconds(3000)*/) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
         unique_lock<mutex> locky(_lock);
 
         fd_set readFileDescriptors;
         timeval waitTime;
-        waitTime.tv_sec = timeout.count() / 1000;
-        waitTime.tv_usec = timeout.count() * 1000;
+        waitTime.tv_usec = timeout.count();
 
         FD_ZERO(&readFileDescriptors);
         FD_SET(_socketFd, &readFileDescriptors);
@@ -124,6 +123,26 @@ namespace sockcanpp {
 
         return fdsAvailable > 0;
     }
+
+    /**
+     * @brief Blocks until one or more CAN messages appear on the bus, or until the timeout runs out.
+     *
+     * @param timeout The time (in millis) to wait before timing out.
+     *
+     * @return true If messages are available on the bus.
+     * @return false Otherwise.
+     */
+    bool CanDriver::waitForMessages(milliseconds timeout) { return waitForMessages(std::chrono::duration_cast<microseconds>(timeout)); }
+
+    /**
+     * @brief Blocks until one or more CAN messages appear on the bus, or until the timeout runs out.
+     *
+     * @param timeout The time (in nanoseconds) to wait before timing out.
+     *
+     * @return true If messages are available on the bus.
+     * @return false Otherwise.
+     */
+    bool CanDriver::waitForMessages(nanoseconds timeout/* = nanoseconds(3000)*/) { return waitForMessages(std::chrono::duration_cast<microseconds>(timeout)); }
 
     /**
      * @brief Attempts to read a message from the associated CAN bus.
@@ -146,8 +165,6 @@ namespace sockcanpp {
 
         ssize_t readBytes{0};
         can_frame canFrame{};
-
-        memset(&canFrame, 0, sizeof(can_frame));
 
         readBytes = read(_socketFd, &canFrame, sizeof(can_frame));
 
@@ -195,7 +212,29 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, milliseconds delay, bool forceExtended) {
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, microseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+
+    /**
+     * @brief Attempts to send a queue of messages on the associated CAN bus.
+     *
+     * @param messages A queue containing the messages to be sent.
+     * @param delay If greater than 0, will delay the sending of the next message.
+     * @param forceExtended Whether or not to force use of an extended ID.
+     *
+     * @return int32_t The total amount of bytes sent.
+     */
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, milliseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+
+    /**
+     * @brief Attempts to send a queue of messages on the associated CAN bus.
+     *
+     * @param messages A queue containing the messages to be sent.
+     * @param delay If greater than 0, will delay the sending of the next message.
+     * @param forceExtended Whether or not to force use of an extended ID.
+     *
+     * @return int32_t The total amount of bytes sent.
+     */
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay, bool forceExtended) {
         if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
 
         ssize_t totalBytesWritten = 0;
@@ -203,6 +242,10 @@ namespace sockcanpp {
         while (!messages.empty()) {
             totalBytesWritten += sendMessage(messages.front(), forceExtended);
             messages.pop();
+
+            if (delay.count() > 0) {
+                sleep_for(delay);
+            }
         }
 
         return totalBytesWritten;
@@ -232,9 +275,7 @@ namespace sockcanpp {
      * @param mask The bit mask to apply.
      * @param filterId The ID to filter on.
      */
-    void CanDriver::setCanFilterMask(const int32_t mask, const CanId& filterId) {
-        setCanFilters({{filterId, static_cast<uint32_t>(mask)}});
-    }
+    void CanDriver::setCanFilterMask(const int32_t mask, const CanId& filterId) { setCanFilters({{filterId, static_cast<uint32_t>(mask)}}); }
 
     /**
      * @brief Sets multiple CAN filters for the associated CAN bus.
@@ -262,6 +303,21 @@ namespace sockcanpp {
             throw CanInitException(formatString("FAILED to set CAN filters on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
         }
     }
+
+    /**
+     * @brief Sets the error filter for the associated CAN bus.
+     *
+     * @param enabled Whether or not to enable the error filter.
+     */
+    void CanDriver::setErrorFilter(const bool enabled/* = true*/) const {
+        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        int32_t errorFilter = enabled ? 1 : 0;
+
+        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &errorFilter, sizeof(errorFilter)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        }
+    }
 #pragma endregion
 
     //////////////////////////////////////
@@ -274,15 +330,10 @@ namespace sockcanpp {
      * @brief Initialises the underlying CAN socket.
      */
     void CanDriver::initialiseSocketCan() {
-        // unique_lock<mutex> locky(_lock);
-
-        struct sockaddr_can address;
-        struct ifreq ifaceRequest;
-        int64_t fdOptions = 0;
-        int32_t tmpReturn;
-
-        memset(&address, 0, sizeof(struct sockaddr_can));
-        memset(&ifaceRequest, 0, sizeof(struct ifreq));
+        struct sockaddr_can address{};
+        struct ifreq ifaceRequest{};
+        int64_t fdOptions{0};
+        int32_t tmpReturn{0};
 
         _socketFd = socket(PF_CAN, SOCK_RAW, _canProtocol);
 
@@ -290,7 +341,7 @@ namespace sockcanpp {
             throw CanInitException(formatString("FAILED to initialise socketcan! Error: %d => %s", errno, strerror(errno)));
         }
 
-        strcpy(ifaceRequest.ifr_name, _canInterface.c_str());
+        std::copy(_canInterface.begin(), _canInterface.end(), ifaceRequest.ifr_name);
 
         if ((tmpReturn = ioctl(_socketFd, SIOCGIFINDEX, &ifaceRequest)) == -1) {
             throw CanInitException(formatString("FAILED to perform IO control operation on socket %s! Error: %d => %s", _canInterface.c_str(), errno,

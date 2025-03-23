@@ -47,7 +47,11 @@
  */
 namespace sockcanpp {
 
+    using namespace std::chrono_literals;
+
+    using std::chrono::microseconds;
     using std::chrono::milliseconds;
+    using std::chrono::nanoseconds;
     using std::mutex;
     using std::string;
     using std::queue;
@@ -77,26 +81,32 @@ namespace sockcanpp {
             virtual ~CanDriver() { uninitialiseSocketCan(); } //!< Destructor
 
         public: // +++ Getter / Setter +++
-            CanDriver&                  setDefaultSenderId(const CanId id) { this->_defaultSenderId = id; return *this; } //!< Sets the default sender ID
+            CanDriver&                  setDefaultSenderId(const CanId& id) { this->_defaultSenderId = id; return *this; } //!< Sets the default sender ID
 
             CanId                       getDefaultSenderId() const { return this->_defaultSenderId; } //!< Gets the default sender ID
 
             filtermap_t                 getFilterMask() const { return this->_canFilterMask; } //!< Gets the filter mask used by this instance
+            
             int32_t                     getMessageQueueSize() const { return this->_queueSize; } //!< Gets the amount of CAN messages found after last calling waitForMessages()
             int32_t                     getSocketFd() const { return this->_socketFd; } //!< The socket file descriptor used by this instance.
 
         public: // +++ I/O +++
-            virtual bool                waitForMessages(milliseconds timeout = milliseconds(3000)); //!< Waits for CAN messages to appear
+            virtual bool                waitForMessages(microseconds timeout = 3000us); //!< Waits for CAN messages to appear
+            virtual bool                waitForMessages(milliseconds timeout = 3000ms); //!< Waits for CAN messages to appear
+            virtual bool                waitForMessages(nanoseconds timeout = 3000ns); //!< Waits for CAN messages to appear
 
             virtual CanMessage          readMessage(); //!< Attempts to read a single message from the bus
 
             virtual ssize_t             sendMessage(const CanMessage& message, bool forceExtended = false); //!< Attempts to send a single CAN message
-            virtual ssize_t             sendMessageQueue(queue<CanMessage> messages, milliseconds delay = milliseconds(20), bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, microseconds delay = 20us, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, milliseconds delay = 20ms, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay = 20ns, bool forceExtended = false); //!< Attempts to send a queue of messages
              
             virtual queue<CanMessage>   readQueuedMessages(); //!< Attempts to read all queued messages from the bus
 
             virtual void                setCanFilterMask(const int32_t mask, const CanId& filterId); //!< Attempts to set a new CAN filter mask to the interface
             virtual void                setCanFilters(const filtermap_t& filters); //!< Sets the CAN filters for the interface
+            virtual void                setErrorFilter(const bool enabled = true) const; //!< Sets the error filter for the interface
 
         protected: // +++ Socket Management +++
             virtual void                initialiseSocketCan(); //!< Initialises socketcan
