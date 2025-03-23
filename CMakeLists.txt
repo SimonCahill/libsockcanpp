@@ -20,6 +20,7 @@ add_compile_options(
     -Wall
     -Werror
     -Wpedantic
+    -Wno-unknown-pragmas
 )
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
