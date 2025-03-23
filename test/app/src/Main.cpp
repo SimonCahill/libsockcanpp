@@ -30,6 +30,8 @@
 #include <exceptions/CanInitException.hpp>
 #include <exceptions/InvalidSocketException.hpp>
 
+using namespace std::chrono_literals;
+
 using sockcanpp::CanDriver;
 using sockcanpp::CanId;
 using sockcanpp::exceptions::CanException;
@@ -87,7 +89,7 @@ int main(int32_t argCount, char** argValues) {
         catch (InvalidSocketException& ex) { cerr << "Failed to send test message! " << ex.what() << endl; }
 
         printf("Reading messages\n");
-        if (!canDriver->waitForMessages()) continue;
+        if (!canDriver->waitForMessages(3000ns)) continue;
 
         cout << "Reading queue..." << endl;
         auto canMessages = canDriver->readQueuedMessages();
