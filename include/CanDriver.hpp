@@ -86,9 +86,11 @@ namespace sockcanpp {
             CanId                       getDefaultSenderId() const { return this->_defaultSenderId; } //!< Gets the default sender ID
 
             filtermap_t                 getFilterMask() const { return this->_canFilterMask; } //!< Gets the filter mask used by this instance
-            
+
             int32_t                     getMessageQueueSize() const { return this->_queueSize; } //!< Gets the amount of CAN messages found after last calling waitForMessages()
             int32_t                     getSocketFd() const { return this->_socketFd; } //!< The socket file descriptor used by this instance.
+
+            string                      getCanInterface() const { return this->_canInterface; } //!< The CAN interface used by this instance.
 
         public: // +++ I/O +++
             virtual bool                waitForMessages(microseconds timeout = 3000us); //!< Waits for CAN messages to appear
