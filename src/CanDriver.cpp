@@ -106,7 +106,7 @@ namespace sockcanpp {
         unique_lock<mutex> locky(_lock);
 
         fd_set readFileDescriptors;
-        timeval waitTime{0, timeout.count()};
+        timeval waitTime{0, static_cast<suseconds_t>(timeout.count())};
 
         FD_ZERO(&readFileDescriptors);
         FD_SET(_socketFd, &readFileDescriptors);
