@@ -106,10 +106,14 @@ namespace sockcanpp {
              
             virtual queue<CanMessage>   readQueuedMessages(); //!< Attempts to read all queued messages from the bus
 
+        public: // +++ Socket Management +++
+            virtual void                allowCanFdFrames(const bool enabled = true) const; //!< Sets the CAN FD frame option for the interface
+            virtual void                allowCanXlFrames(const bool enabled = true) const; //!< Sets the CAN XL frame option for the interface
             virtual void                joinCanFilters() const; //!< Configures the socket to join the CAN filters
             virtual void                setCanFilterMask(const int32_t mask, const CanId& filterId); //!< Attempts to set a new CAN filter mask to the interface
             virtual void                setCanFilters(const filtermap_t& filters); //!< Sets the CAN filters for the interface
             virtual void                setErrorFilter(const bool enabled = true) const; //!< Sets the error filter for the interface
+            virtual void                setReceiveOwnMessages(const bool enabled = true) const; //!< Sets the receive own messages option for the interface
 
         protected: // +++ Socket Management +++
             virtual void                initialiseSocketCan(); //!< Initialises socketcan
