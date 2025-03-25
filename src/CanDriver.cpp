@@ -282,6 +282,7 @@ namespace sockcanpp {
         }
     }
 
+    #ifdef CANXL_XLF
     /**
      * @brief Sets the CAN XL option for the interface.
      * 
@@ -294,10 +295,12 @@ namespace sockcanpp {
 
         int32_t canXlFrames = enabled ? 1 : 0;
 
+        
         if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canXlFrames, sizeof(canXlFrames)) == -1) {
             throw CanInitException(formatString("FAILED to set CAN XL frames on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
         }
     }
+    #endif // CANXL_XLF
 
     /**
      * @brief Configures the socket to join the CAN filters.

@@ -106,7 +106,9 @@ namespace sockcanpp {
 
         public: // +++ Socket Management +++
             virtual void                allowCanFdFrames(const bool enabled = true) const; //!< Sets the CAN FD frame option for the interface
+            #ifdef CANXL_XLF
             virtual void                allowCanXlFrames(const bool enabled = true) const; //!< Sets the CAN XL frame option for the interface
+            #endif // CANXL_XLF
             virtual void                joinCanFilters() const; //!< Configures the socket to join the CAN filters
             virtual void                setCanFilterMask(const int32_t mask, const CanId& filterId); //!< Attempts to set a new CAN filter mask to the interface
             virtual void                setCanFilters(const filtermap_t& filters); //!< Sets the CAN filters for the interface
@@ -137,8 +139,6 @@ namespace sockcanpp {
             string      _canInterface; //!< The CAN interface used for communication (e.g. can0, can1, ...)
             
     };
-
-    
 
     /**
      * @brief Formats a std string object.
