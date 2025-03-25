@@ -269,6 +269,22 @@ namespace sockcanpp {
     }
 
     /**
+     * @brief Configures the socket to join the CAN filters.
+     * This is especially required, when using inverted CAN filters.
+     * 
+     * Source: https://stackoverflow.com/a/57680496/2921426
+     */
+    void CanDriver::joinCanFilters() const {
+        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        int32_t joinFilters = 1;
+
+        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_JOIN_FILTERS, &joinFilters, sizeof(joinFilters)) == -1) {
+            throw CanInitException(formatString("FAILED to join CAN filters on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        }
+    }
+
+    /**
      * @brief Attempts to set the filter mask for the associated CAN bus.
      *
      * @param mask The bit mask to apply.
