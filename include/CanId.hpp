@@ -152,6 +152,15 @@ namespace sockcanpp {
         #endif // __cpp_concepts >= 201907
 
         constexpr CanId operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
+
+        template<typename T>
+        constexpr CanId operator |=(const T x) { return m_identifier |= x.m_identifier; } //!< Performs a bitwise OR operation on this ID and another.
+
+        template<typename T>
+        constexpr CanId operator &=(const T x) { return m_identifier &= x.m_identifier; } //!< Performs a bitwise AND operation on this ID and another.
+
+        template<typename T>
+        constexpr CanId operator ^=(const T x) { return m_identifier ^= x.m_identifier; } //!< Performs a bitwise XOR operation on this ID and another.
 #pragma endregion
 
 #pragma region "Arithmetic Operators"
