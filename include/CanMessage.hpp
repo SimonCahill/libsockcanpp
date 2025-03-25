@@ -5,9 +5,7 @@
  * @version 0.1
  * @date 2020-07-01
  * 
- * @copyright Copyright (c) 2020 Simon Cahill
- *
- *  Copyright 2020 Simon Cahill
+ * @copyright Copyright (c) 2020-2025 Simon Cahill
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -57,14 +55,14 @@ namespace sockcanpp {
             CanMessage(const struct can_frame frame):
             _canIdentifier(frame.can_id), _frameData((const char*)frame.data, frame.can_dlc), _rawFrame(frame) { }
 
-            CanMessage(const CanId canId, const string frameData): _canIdentifier(canId), _frameData(frameData) {
-                if (frameData.size() > 8) {
+            CanMessage(const CanId canId, const string& frameData): _canIdentifier(canId), _frameData(frameData) {
+                if (frameData.size() > CAN_MAX_DLEN) {
                     throw system_error(error_code(0xbadd1c, generic_category()), "Payload too big!");
                 }
 
-                struct can_frame rawFrame;
+                struct can_frame rawFrame{};
                 rawFrame.can_id = canId;
-                memcpy(rawFrame.data, frameData.data(), frameData.size());
+                std::copy(frameData.begin(), frameData.end(), rawFrame.data);
                 rawFrame.can_dlc = frameData.size();
 
                 _rawFrame = rawFrame;

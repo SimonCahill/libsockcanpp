@@ -5,9 +5,7 @@
  * @version 0.1
  * @date 2020-07-01
  * 
- * @copyright Copyright (c) 2020
- *
- *  Copyright 2020 Simon Cahill
+ * @copyright Copyright (c) 2020-2025 Simon Cahill
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -106,9 +104,16 @@ namespace sockcanpp {
              
             virtual queue<CanMessage>   readQueuedMessages(); //!< Attempts to read all queued messages from the bus
 
+        public: // +++ Socket Management +++
+            virtual void                allowCanFdFrames(const bool enabled = true) const; //!< Sets the CAN FD frame option for the interface
+            #ifdef CANXL_XLF
+            virtual void                allowCanXlFrames(const bool enabled = true) const; //!< Sets the CAN XL frame option for the interface
+            #endif // CANXL_XLF
+            virtual void                joinCanFilters() const; //!< Configures the socket to join the CAN filters
             virtual void                setCanFilterMask(const int32_t mask, const CanId& filterId); //!< Attempts to set a new CAN filter mask to the interface
             virtual void                setCanFilters(const filtermap_t& filters); //!< Sets the CAN filters for the interface
             virtual void                setErrorFilter(const bool enabled = true) const; //!< Sets the error filter for the interface
+            virtual void                setReceiveOwnMessages(const bool enabled = true) const; //!< Sets the receive own messages option for the interface
 
         protected: // +++ Socket Management +++
             virtual void                initialiseSocketCan(); //!< Initialises socketcan
@@ -134,8 +139,6 @@ namespace sockcanpp {
             string      _canInterface; //!< The CAN interface used for communication (e.g. can0, can1, ...)
             
     };
-
-    
 
     /**
      * @brief Formats a std string object.

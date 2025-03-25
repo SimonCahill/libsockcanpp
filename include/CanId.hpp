@@ -5,9 +5,7 @@
  * @version 0.1
  * @date 2020-07-01
  * 
- * @copyright Copyright (c) 2020 Simon Cahill
- *
- *  Copyright 2020 Simon Cahill
+ * @copyright Copyright (c) 2020-2025 Simon Cahill
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -152,6 +150,15 @@ namespace sockcanpp {
         #endif // __cpp_concepts >= 201907
 
         constexpr CanId operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
+
+        template<typename T>
+        constexpr CanId operator |=(const T x) { return m_identifier |= x; } //!< Performs a bitwise OR operation on this ID and another.
+
+        template<typename T>
+        constexpr CanId operator &=(const T x) { return m_identifier &= x; } //!< Performs a bitwise AND operation on this ID and another.
+
+        template<typename T>
+        constexpr CanId operator ^=(const T x) { return m_identifier ^= x; } //!< Performs a bitwise XOR operation on this ID and another.
 #pragma endregion
 
 #pragma region "Arithmetic Operators"

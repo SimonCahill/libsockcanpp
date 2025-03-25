@@ -5,10 +5,7 @@
  * @version 0.1
  * @date 2020-07-01
  *
- * @copyright Copyright (c) 2020 Simon Cahill
- *
- *
- *  Copyright 2020 Simon Cahill
+ * @copyright Copyright (c) 2020-2025 Simon Cahill
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -269,6 +266,59 @@ namespace sockcanpp {
     }
 
     /**
+     * @brief Sets the CAN FD frame option for the interface.
+     * 
+     * This option allows the current driver instance to receive CAN FD frames.
+     * 
+     * @param enabled Whether or not to enable the CAN FD frame option.
+     */
+    void CanDriver::allowCanFdFrames(const bool enabled/* = true*/) const {
+        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        int32_t canFdFrames = enabled ? 1 : 0;
+
+        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canFdFrames, sizeof(canFdFrames)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN FD frames on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        }
+    }
+
+    #ifdef CANXL_XLF
+    /**
+     * @brief Sets the CAN XL option for the interface.
+     * 
+     * This option allows the current driver instance to send/receive CAN XL frames.
+     * 
+     * @param enabled Whether or not to enable the CAN XL option.
+     */
+    void CanDriver::allowCanXlFrames(const bool enabled/* = true*/) const {
+        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        int32_t canXlFrames = enabled ? 1 : 0;
+
+        
+        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canXlFrames, sizeof(canXlFrames)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN XL frames on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        }
+    }
+    #endif // CANXL_XLF
+
+    /**
+     * @brief Configures the socket to join the CAN filters.
+     * This is especially required, when using inverted CAN filters.
+     * 
+     * Source: https://stackoverflow.com/a/57680496/2921426
+     */
+    void CanDriver::joinCanFilters() const {
+        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        int32_t joinFilters = 1;
+
+        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_JOIN_FILTERS, &joinFilters, sizeof(joinFilters)) == -1) {
+            throw CanInitException(formatString("FAILED to join CAN filters on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        }
+    }
+
+    /**
      * @brief Attempts to set the filter mask for the associated CAN bus.
      *
      * @param mask The bit mask to apply.
@@ -290,11 +340,11 @@ namespace sockcanpp {
         // Structured bindings only available with C++17
         #if __cplusplus >= 201703L
         for (const auto [id, filter] : filters) {
-            canFilters.push_back({id, filter});
+            canFilters.push_back({*id, filter});
         }
         #else
         for (const auto& filterPair : filters) {
-            canFilters.push_back({filterPair.first, filterPair.second});
+            canFilters.push_back({*filterPair.first, filterPair.second});
         }
         #endif
 
@@ -314,6 +364,23 @@ namespace sockcanpp {
         int32_t errorFilter = enabled ? 1 : 0;
 
         if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &errorFilter, sizeof(errorFilter)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        }
+    }
+    
+    /**
+     * @brief Sets the receive own messages option for the associated CAN bus.
+     * 
+     * This option allows the socket to receive its own messages.
+     * 
+     * @param enabled Whether or not to enable the receive own messages option.
+     */
+    void CanDriver::setReceiveOwnMessages(const bool enabled) const {
+        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+
+        int32_t receiveOwnMessages = enabled ? 1 : 0;
+
+        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &receiveOwnMessages, sizeof(receiveOwnMessages)) == -1) {
             throw CanInitException(formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
         }
     }
