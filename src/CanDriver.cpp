@@ -5,10 +5,7 @@
  * @version 0.1
  * @date 2020-07-01
  *
- * @copyright Copyright (c) 2020 Simon Cahill
- *
- *
- *  Copyright 2020 Simon Cahill
+ * @copyright Copyright (c) 2020-2025 Simon Cahill
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
