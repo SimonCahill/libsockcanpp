@@ -7,6 +7,10 @@ target_sources(${PROJECT_NAME}
         CanDriver.hpp
         CanId.hpp
         CanMessage.hpp
+        exceptions/CanCloseException.hpp
+        exceptions/CanException.hpp
+        exceptions/CanInitException.hpp
+        exceptions/InvalidSocketException.hpp
 )
 
 if (TARGET sockcanpp_test)
@@ -17,5 +21,9 @@ if (TARGET sockcanpp_test)
             CanDriver.hpp
             CanId.hpp
             CanMessage.hpp
+            exceptions/CanCloseException.hpp
+            exceptions/CanException.hpp
+            exceptions/CanInitException.hpp
+            exceptions/InvalidSocketException.hpp
     )
 endif()
