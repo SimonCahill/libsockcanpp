@@ -131,6 +131,7 @@ namespace sockcanpp {
             int32_t     _canProtocol; //!< The protocol used when communicating via CAN
             int32_t     _socketFd{-1}; //!< The CAN socket file descriptor
             int32_t     _queueSize{0}; ///!< The size of the message queue read by waitForMessages()
+            bool        _canReadQueueSize{true}; ///!< Is the queue size available
 
             //!< Mutex for thread-safety.
             mutex       _lock{};

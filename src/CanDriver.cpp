@@ -115,6 +115,9 @@ namespace sockcanpp {
             _queueSize = static_cast<int32_t>(std::ceil(bytesAvailable / sizeof(can_frame)));
         } else {
             _queueSize = 0;
+            // vcan interfaces don't support FIONREAD. So fall back to
+            // using alternate implementation in readQueuedMessages().
+            _canReadQueueSize = false;
         }
 
         return fdsAvailable > 0;
@@ -258,8 +261,27 @@ namespace sockcanpp {
         unique_lock<mutex> locky{_lock};
         queue<CanMessage> messages{};
 
-        for (int32_t i = _queueSize; 0 < i; --i) {
-	        messages.emplace(readMessageLock(false));
+        if (_canReadQueueSize) {
+            for (int32_t i = _queueSize; 0 < i; --i) {
+                messages.emplace(readMessageLock(false));
+            }
+        } else {
+            // If the interface doesn't support FIONREAD, fall back
+            // to reading until data exhausted.
+            bool more{true};
+
+            do {
+                ssize_t readBytes;
+                can_frame canFrame{};
+                readBytes = read(_socketFd, &canFrame, sizeof(can_frame));
+                if (readBytes >= 0) {
+                    messages.emplace(canFrame);
+                } else if (errno == EAGAIN) {
+                    more = false;
+                } else {
+                    throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), _socketFd);
+                }
+            } while (more);
         }
 
         return messages;
