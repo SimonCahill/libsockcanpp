@@ -75,7 +75,7 @@ int main(int32_t argCount, char** argValues) {
 
     CanDriver* canDriver{nullptr};
     try {
-        canDriver = new CanDriver(canInterface, CAN_RAW);
+        canDriver = new CanDriver(canInterface, desiredCanSocket);
     } catch (CanInitException& ex) {
         cerr << "An error occurred while initialising CanDriver: " << ex.what() << endl;
         if (canDriver) { delete canDriver; }
