@@ -42,7 +42,7 @@ namespace sockcanpp { namespace exceptions {
             virtual ~CanInitException() { }
 
         public: // +++ Override +++
-            const char* what() { return _message.c_str(); }
+            const char* what() const noexcept { return _message.c_str(); }
 
         private:
             string _message;
