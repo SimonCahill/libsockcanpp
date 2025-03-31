@@ -42,7 +42,7 @@ namespace sockcanpp { namespace exceptions {
             ~InvalidSocketException() {}
 
         public: // +++ Overrides +++
-            const char* what() { return m_message.c_str(); }
+            const char* what() const noexcept { return m_message.c_str(); }
 
         public: // +++ Getter +++
             const int32_t getSocket() const { return m_socket; }
