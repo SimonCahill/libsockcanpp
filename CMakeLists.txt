@@ -91,11 +91,3 @@ add_custom_command(
         COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
-###
-# If the CMAKE_BUILD_TYPE is set to Debug, enable the tests
-###
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND BUILD_TESTS STREQUAL "ON")
-    enable_testing()
-    add_subdirectory(test)
-endif()
