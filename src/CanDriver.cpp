@@ -431,7 +431,7 @@ namespace sockcanpp {
                 #if __cpp_lib_format <= 202002L
                 formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno))
                 #else
-                std::format("FAILED to set CAN error filter on socket {0:d}! Error: {1:d} => {2:s}", _socketFd, errno, strerror(errno))
+                std::format("FAILED to set CAN error filter on socket {0:d}! Error: {1:d} => {2:s}", m_socketFd, errno, strerror(errno))
                 #endif // __cpp_lib_format <= 202002L
             );
         }
@@ -454,7 +454,7 @@ namespace sockcanpp {
                 #if __cpp_lib_format <= 202002L
                 formatString("FAILED to set CAN message echo on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno))
                 #else
-                std::format("FAILED to set CAN message echo on socket {0:d}! Error: {1:d} => {2:s}", _socketFd, errno, strerror(errno))
+                std::format("FAILED to set CAN message echo on socket {0:d}! Error: {1:d} => {2:s}", m_socketFd, errno, strerror(errno))
                 #endif // __cpp_lib_format <= 202002L
             );
         }
