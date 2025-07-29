@@ -323,3 +323,13 @@ TEST(CanIdTests, CanId_TestStringToCanIdConversion_ExpectError) {
 }
 
 #endif // __cpp_concepts >= 201907
+
+#if sockcanpp_FMT_SUPPORT
+
+TEST(CanIdTests, CanId_fmtlib_formatting_ExpectTrue) {
+    CanId id(0x123);
+    string formatted = fmt::format("{}", id);
+    ASSERT_EQ(formatted, "123");
+}
+
+#endif // sockcanpp_FMT_SUPPORT

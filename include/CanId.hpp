@@ -269,4 +269,20 @@ namespace sockcanpp {
 
 }
 
+#if sockcanpp_FMT_SUPPORT
+
+/*******************************************************
+ * This block enables support for custom formatting of
+ * CanId type using fmtlib.
+ ****************************************************/
+#include <fmt/format.h>
+
+template<> struct fmt::formatter<sockcanpp::CanId>: formatter<canid_t> {
+    auto format(sockcanpp::CanId c, format_context& ctx) {
+        return formatter<canid_t>::format(static_cast<canid_t>(c), ctx);
+    }
+};
+
+#endif // sockcanpp_FMT_SUPPORT
+
 #endif // LIBSOCKPP_INCLUDE_CANID_HPP

@@ -8,12 +8,21 @@ option(BUILD_TESTS "Build the tests" OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(sockcanpp_CONCEPT_SUPPORT "Allow higher level language support" ON)
+option(sockcanpp_FMT_SUPPORT "Enable support for custom formatting of CanId type using fmtlib" ON)
 
 if (sockcanpp_CONCEPT_SUPPORT)
     message(STATUS "Enabling support for higher level language features")
     set(CMAKE_CXX_STANDARD 20)
 else()
     set(CMAKE_CXX_STANDARD 11)
+endif()
+
+if (sockcanpp_FMT_SUPPORT)
+    message(STATUS "Enabling support for fmtlib formatting")
+    find_package(fmt)
+    add_definitions(-Dsockcanpp_FMT_SUPPORT)
+else()
+    message(STATUS "Disabling support for fmtlib formatting")
 endif()
 
 add_compile_options(
