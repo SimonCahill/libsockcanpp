@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/sockios.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -63,12 +64,12 @@ namespace sockcanpp {
     using std::mutex;
     using std::queue;
     using std::string;
-    using std::strncpy;
     using std::unique_lock;
     using std::unique_ptr;
     using std::chrono::milliseconds;
-    using std::this_thread::sleep_for;
     using std::vector;
+
+    namespace thread = std::this_thread;
 
     //////////////////////////////////////
     //      PUBLIC IMPLEMENTATION       //
@@ -83,7 +84,7 @@ namespace sockcanpp {
         CanDriver(canInterface, canProtocol, filtermap_t{{0, filterMask}}, defaultSenderId) { }
 
     CanDriver::CanDriver(const string& canInterface, const int32_t canProtocol, const filtermap_t& filters, const CanId defaultSenderId):
-        _defaultSenderId(defaultSenderId), _canFilterMask(filters), _canProtocol(canProtocol), _canInterface(canInterface) {
+        m_defaultSenderId(defaultSenderId), m_canFilterMask(filters), m_canProtocol(canProtocol), m_canInterface(canInterface) {
         initialiseSocketCan();
     }
 #pragma endregion
@@ -98,26 +99,26 @@ namespace sockcanpp {
      * @return false Otherwise.
      */
     bool CanDriver::waitForMessages(microseconds timeout/* = microseconds(3000)*/) {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock<mutex> locky(_lock);
+        unique_lock<mutex> locky(m_lock);
 
         fd_set readFileDescriptors;
         timeval waitTime{0, static_cast<suseconds_t>(timeout.count())};
 
         FD_ZERO(&readFileDescriptors);
-        FD_SET(_socketFd, &readFileDescriptors);
-        const auto fdsAvailable = select(_socketFd + 1, &readFileDescriptors, nullptr, nullptr, &waitTime);
+        FD_SET(m_socketFd, &readFileDescriptors);
+        const auto fdsAvailable = select(m_socketFd + 1, &readFileDescriptors, nullptr, nullptr, &waitTime);
 
         int32_t bytesAvailable{0};
-        const auto retCode = ioctl(_socketFd, FIONREAD, &bytesAvailable);
+        const auto retCode = ioctl(m_socketFd, FIONREAD, &bytesAvailable);
         if (retCode == 0) {
-            _queueSize = static_cast<int32_t>(std::ceil(bytesAvailable / sizeof(can_frame)));
+            m_queueSize = static_cast<int32_t>(std::ceil(bytesAvailable / sizeof(can_frame)));
         } else {
-            _queueSize = 0;
+            m_queueSize = 0;
             // vcan interfaces don't support FIONREAD. So fall back to
             // using alternate implementation in readQueuedMessages().
-            _canReadQueueSize = false;
+            m_canReadQueueSize = false;
         }
 
         return fdsAvailable > 0;
@@ -155,19 +156,38 @@ namespace sockcanpp {
      *
      * @return CanMessage The message read from the bus.
      */
-    CanMessage CanDriver::readMessageLock(bool const lock) {
+    CanMessage CanDriver::readMessageLock(bool const lock /* = true */) {
         unique_ptr<unique_lock<mutex>> locky{nullptr};
 
-        if (lock) { locky = unique_ptr<unique_lock<mutex>>{new unique_lock<mutex>{_lock}}; }
+        if (lock) { locky = unique_ptr<unique_lock<mutex>>{new unique_lock<mutex>{m_lock}}; }
         
-        if (0 > _socketFd) { throw InvalidSocketException("Invalid socket!", _socketFd); }
-
-        ssize_t readBytes{0};
+        if (0 > m_socketFd) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
         can_frame canFrame{};
 
-        readBytes = read(_socketFd, &canFrame, sizeof(can_frame));
+        if (const auto readBytes = read(m_socketFd, &canFrame, sizeof(can_frame)); readBytes < 0) {
+            throw CanException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to read from CAN! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            , m_socketFd);
+        }
 
-        if (0 > readBytes) { throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), _socketFd); }
+        if (m_collectTelemetry) {
+            // Read timestamp from the socket if available.
+            struct timeval tv{};
+            if (ioctl(m_socketFd, SIOCGSTAMP, &tv) < 0) {
+                throw CanException(
+                    #if __cpp_lib_format <= 202002L
+                    formatString("FAILED to read timestamp from socket! Error: %d => %s", errno, strerror(errno))
+                    #else
+                    std::format("FAILED to read timestamp from socket! Error: {0:d} => {1:s}", errno, strerror(errno))
+                    #endif // __cpp_lib_format <= 202002L
+                , m_socketFd);
+            }
+            return CanMessage{canFrame, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(tv.tv_sec) + std::chrono::microseconds(tv.tv_usec))};
+        }
 
         return CanMessage{canFrame};
     }
@@ -181,23 +201,37 @@ namespace sockcanpp {
      * @return ssize_t The amount of bytes sent on the bus.
      */
     ssize_t CanDriver::sendMessage(const CanMessage& message, bool forceExtended) {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock<mutex> locky(_lockSend);
+        unique_lock<mutex> locky(m_lockSend);
 
         ssize_t bytesWritten = 0;
 
         if (message.getFrameData().size() > CAN_MAX_DATA_LENGTH) {
-            throw CanException(formatString("INVALID data length! Message must be smaller than %d bytes!", CAN_MAX_DATA_LENGTH), _socketFd);
+            throw CanException(
+                #if __cpp_lib_format <= 202002L
+                formatString("INVALID data length! Message must be smaller than %d bytes!", CAN_MAX_DATA_LENGTH)
+                #else
+                std::format("INVALID data length! Message must be smaller than {0:d} bytes!", CAN_MAX_DATA_LENGTH)
+                #endif // __cpp_lib_format <= 202002L
+            , m_socketFd);
         }
 
         auto canFrame = message.getRawFrame();
 
         if (forceExtended || ((uint32_t)message.getCanId() > CAN_SFF_MASK)) { canFrame.can_id |= CAN_EFF_FLAG; }
 
-        bytesWritten = write(_socketFd, (const void*)&canFrame, sizeof(canFrame));
+        bytesWritten = write(m_socketFd, &canFrame, sizeof(canFrame));
 
-        if (bytesWritten == -1) { throw CanException(formatString("FAILED to write data to socket! Error: %d => %s", errno, strerror(errno)), _socketFd); }
+        if (bytesWritten < 0) {
+            throw CanException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to write data to socket! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to write data to socket! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            , m_socketFd);
+        }
 
         return bytesWritten;
     }
@@ -211,7 +245,7 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, microseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, microseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
 
     /**
      * @brief Attempts to send a queue of messages on the associated CAN bus.
@@ -222,7 +256,7 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, milliseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, milliseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
 
     /**
      * @brief Attempts to send a queue of messages on the associated CAN bus.
@@ -233,8 +267,8 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay, bool forceExtended) {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, nanoseconds delay, bool forceExtended) {
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         ssize_t totalBytesWritten = 0;
 
@@ -243,7 +277,7 @@ namespace sockcanpp {
             messages.pop();
 
             if (delay.count() > 0) {
-                sleep_for(delay);
+                thread::sleep_for(delay);
             }
         }
 
@@ -256,13 +290,13 @@ namespace sockcanpp {
      * @return queue<CanMessage> A queue containing the messages read from the bus buffer.
      */
     queue<CanMessage> CanDriver::readQueuedMessages() {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock<mutex> locky{_lock};
+        unique_lock<mutex> locky{m_lock};
         queue<CanMessage> messages{};
 
-        if (_canReadQueueSize) {
-            for (int32_t i = _queueSize; 0 < i; --i) {
+        if (m_canReadQueueSize) {
+            for (int32_t i = m_queueSize; 0 < i; --i) {
                 messages.emplace(readMessageLock(false));
             }
         } else {
@@ -273,13 +307,13 @@ namespace sockcanpp {
             do {
                 ssize_t readBytes;
                 can_frame canFrame{};
-                readBytes = read(_socketFd, &canFrame, sizeof(can_frame));
+                readBytes = read(m_socketFd, &canFrame, sizeof(can_frame));
                 if (readBytes >= 0) {
                     messages.emplace(canFrame);
-                } else if (errno == EAGAIN) {
+                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     more = false;
                 } else {
-                    throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), _socketFd);
+                    throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), m_socketFd);
                 }
             } while (more);
         }
@@ -295,12 +329,12 @@ namespace sockcanpp {
      * @param enabled Whether or not to enable the CAN FD frame option.
      */
     void CanDriver::allowCanFdFrames(const bool enabled/* = true*/) const {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t canFdFrames = enabled ? 1 : 0;
 
-        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canFdFrames, sizeof(canFdFrames)) == -1) {
-            throw CanInitException(formatString("FAILED to set CAN FD frames on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canFdFrames, sizeof(canFdFrames)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN FD frames on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
     }
 
@@ -313,13 +347,13 @@ namespace sockcanpp {
      * @param enabled Whether or not to enable the CAN XL option.
      */
     void CanDriver::allowCanXlFrames(const bool enabled/* = true*/) const {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t canXlFrames = enabled ? 1 : 0;
 
         
-        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canXlFrames, sizeof(canXlFrames)) == -1) {
-            throw CanInitException(formatString("FAILED to set CAN XL frames on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canXlFrames, sizeof(canXlFrames)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN XL frames on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
     }
     #endif // CANXL_XLF
@@ -331,12 +365,12 @@ namespace sockcanpp {
      * Source: https://stackoverflow.com/a/57680496/2921426
      */
     void CanDriver::joinCanFilters() const {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t joinFilters = 1;
 
-        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_JOIN_FILTERS, &joinFilters, sizeof(joinFilters)) == -1) {
-            throw CanInitException(formatString("FAILED to join CAN filters on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_JOIN_FILTERS, &joinFilters, sizeof(joinFilters)) == -1) {
+            throw CanInitException(formatString("FAILED to join CAN filters on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
     }
 
@@ -354,9 +388,9 @@ namespace sockcanpp {
      * @param filters A map containing the filters to apply.
      */
     void CanDriver::setCanFilters(const filtermap_t& filters) {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock<mutex> locky(_lock);
+        unique_lock<mutex> locky(m_lock);
         vector<can_filter> canFilters{};
 
         // Structured bindings only available with C++17
@@ -370,10 +404,17 @@ namespace sockcanpp {
         }
         #endif
 
-        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_FILTER, canFilters.data(), canFilters.size() * sizeof(can_filter)) == -1) {
-            throw CanInitException(formatString("FAILED to set CAN filters on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_FILTER, canFilters.data(), canFilters.size() * sizeof(can_filter)) == -1) {
+            throw CanInitException(formatString("FAILED to set CAN filters on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
     }
+
+    /**
+     * @brief Enables collection of advanced telemetry for the associated CAN bus.
+     *
+     * @param enabled Whether or not to enable telemetry collection.
+     */
+    void CanDriver::setCollectTelemetry(const bool enabled/* = true*/) { m_collectTelemetry = enabled; }
 
     /**
      * @brief Sets the error filter for the associated CAN bus.
@@ -381,12 +422,18 @@ namespace sockcanpp {
      * @param enabled Whether or not to enable the error filter.
      */
     void CanDriver::setErrorFilter(const bool enabled/* = true*/) const {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        int32_t errorFilter = enabled ? 1 : 0;
+        can_err_mask_t errorMask{enabled ? CAN_ERR_MASK : 0x00};
 
-        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &errorFilter, sizeof(errorFilter)) == -1) {
-            throw CanInitException(formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &errorMask, sizeof(can_err_mask_t)) == -1) {
+            throw CanInitException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno))
+                #else
+                std::format("FAILED to set CAN error filter on socket {0:d}! Error: {1:d} => {2:s}", _socketFd, errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            );
         }
     }
     
@@ -398,12 +445,18 @@ namespace sockcanpp {
      * @param enabled Whether or not to enable the receive own messages option.
      */
     void CanDriver::setReceiveOwnMessages(const bool enabled) const {
-        if (_socketFd < 0) { throw InvalidSocketException("Invalid socket!", _socketFd); }
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t receiveOwnMessages = enabled ? 1 : 0;
 
-        if (setsockopt(_socketFd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &receiveOwnMessages, sizeof(receiveOwnMessages)) == -1) {
-            throw CanInitException(formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", _socketFd, errno, strerror(errno)));
+        if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &receiveOwnMessages, sizeof(receiveOwnMessages)) == -1) {
+            throw CanInitException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to set CAN message echo on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno))
+                #else
+                std::format("FAILED to set CAN message echo on socket {0:d}! Error: {1:d} => {2:s}", _socketFd, errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            );
         }
     }
 #pragma endregion
@@ -421,32 +474,57 @@ namespace sockcanpp {
         struct sockaddr_can address{};
         struct ifreq ifaceRequest{};
         int64_t fdOptions{0};
-        int32_t tmpReturn{0};
 
-        _socketFd = socket(PF_CAN, SOCK_RAW, _canProtocol);
+        m_socketFd = socket(PF_CAN, SOCK_RAW, m_canProtocol);
 
-        if (_socketFd == -1) {
-            throw CanInitException(formatString("FAILED to initialise socketcan! Error: %d => %s", errno, strerror(errno)));
+        if (m_socketFd == -1) {
+            throw CanInitException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to initialise socketcan! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to initialise socketcan! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            );
         }
 
-        std::copy(_canInterface.begin(), _canInterface.end(), ifaceRequest.ifr_name);
+        std::copy(m_canInterface.begin(), m_canInterface.end(), ifaceRequest.ifr_name);
 
-        if ((tmpReturn = ioctl(_socketFd, SIOCGIFINDEX, &ifaceRequest)) == -1) {
-            throw CanInitException(formatString("FAILED to perform IO control operation on socket %s! Error: %d => %s", _canInterface.c_str(), errno,
-                                    strerror(errno)));
+        if (const auto ctrlVal = ioctl(m_socketFd, SIOCGIFINDEX, &ifaceRequest); ctrlVal == -1) {
+            throw CanInitException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to perform IO control operation on socket %s! Error: %d => %s", m_canInterface.c_str(), errno,
+                                    strerror(errno))
+                #else
+                std::format("FAILED to perform IO control operation on socket {0:s}! Error: {1:d} => {2:s}", m_canInterface, errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            );
         }
 
-        fdOptions = fcntl(_socketFd, F_GETFL);
+        fdOptions = fcntl(m_socketFd, F_GETFL);
         fdOptions |= O_NONBLOCK;
-        tmpReturn = fcntl(_socketFd, F_SETFL, fdOptions);
+        if (const auto retVal = fcntl(m_socketFd, F_SETFL, fdOptions); retVal != 0) {
+            throw CanInitException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to set non-blocking mode on socket %s! Error: %d => %s", m_canInterface.c_str(), errno, strerror(errno))
+                #else
+                std::format("FAILED to set non-blocking mode on socket {0:s}! Error: {1:d} => {2:s}", m_canInterface, errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            );
+        }
 
         address.can_family = AF_CAN;
         address.can_ifindex = ifaceRequest.ifr_ifindex;
 
-        setCanFilters(_canFilterMask);
+        setCanFilters(m_canFilterMask);
 
-        if ((tmpReturn = bind(_socketFd, (struct sockaddr*)&address, sizeof(address))) == -1) {
-            throw CanInitException(formatString("FAILED to bind to socket CAN! Error: %d => %s", errno, strerror(errno)));
+        if (const auto bindVal = bind(m_socketFd, reinterpret_cast<sockaddr*>(&address), sizeof(address)); bindVal != 0) {
+            throw CanInitException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to bind to socket CAN! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to bind to socket CAN! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            );
         }
     }
 
@@ -454,13 +532,21 @@ namespace sockcanpp {
      * @brief Closes the underlying CAN socket.
      */
     void CanDriver::uninitialiseSocketCan() {
-        unique_lock<mutex> locky(_lock);
+        unique_lock<mutex> locky(m_lock);
 
-        if (_socketFd <= 0) { throw CanCloseException("Cannot close invalid socket!"); }
+        if (m_socketFd <= 0) { throw CanCloseException("Cannot close invalid socket!"); }
 
-        if (close(_socketFd) == -1) { throw CanCloseException(formatString("FAILED to close CAN socket! Error: %d => %s", errno, strerror(errno))); }
+        if (close(m_socketFd) == -1) {
+            throw CanCloseException(
+                #if __cpp_lib_format <= 202002L
+                formatString("FAILED to close CAN socket! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to close CAN socket! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format <= 202002L
+            );
+        }
 
-        _socketFd = -1;
+        m_socketFd = -1;
     }
 #pragma endregion
 
