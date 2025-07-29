@@ -20,8 +20,8 @@
  *  limitations under the License.
  */
 
-#ifndef LIBSOCKPP_INCLUDE_CANID_HPP
-#define LIBSOCKPP_INCLUDE_CANID_HPP
+#ifndef LIBSOCKCANPP_INCLUDE_CANID_HPP
+#define LIBSOCKCANPP_INCLUDE_CANID_HPP
 
 //////////////////////////////
 //      SYSTEM INCLUDES     //
@@ -132,15 +132,15 @@ namespace sockcanpp {
         constexpr bool operator >(T x)               const { return static_cast<canid_t>(x) > m_identifier; } //!< Compares this ID to a 32-bit integer.
 
         template<typename T>
-        constexpr bool operator <=(const T x)        const { return x.m_identifier <= m_identifier; } //!< Compares this ID to another.
+        constexpr bool operator <=(const T x)        const { return m_identifier <= static_cast<canid_t>(x); } //!< Compares this ID to another.
 
         template<typename T>
-        constexpr bool operator >=(const T x)        const { return x.m_identifier >= m_identifier; } //!< Compares this ID to another.
+        constexpr bool operator >=(const T x)        const { return m_identifier >= static_cast<canid_t>(x); } //!< Compares this ID to another.
 #pragma endregion
 
 #pragma region "Assignment Operators"
         template<typename T>
-        constexpr CanId operator =(const T val) { return CanId(val); } //!< Assigns a new integer to this CanID
+        constexpr CanId operator =(const T val) { m_identifier = val; return *this; } //!< Assigns a new integer to this CanID
 
         #if __cpp_concepts >= 201907
         template<Stringable T>
@@ -269,4 +269,4 @@ namespace sockcanpp {
 
 }
 
-#endif // LIBSOCKPP_INCLUDE_CANID_HPP
+#endif // LIBSOCKCANPP_INCLUDE_CANID_HPP
