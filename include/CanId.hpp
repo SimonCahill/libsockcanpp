@@ -140,25 +140,25 @@ namespace sockcanpp {
 
 #pragma region "Assignment Operators"
         template<typename T>
-        constexpr CanId operator =(const T val) { m_identifier = val; return *this; } //!< Assigns a new integer to this CanID
+        constexpr CanId& operator =(const T val) { m_identifier = val; return *this; } //!< Assigns a new integer to this CanID
 
         #if __cpp_concepts >= 201907
         template<Stringable T>
-        CanId operator =(const T& val) {
+        CanId& operator =(const T& val) {
             return operator=(std::stoul(val.data(), nullptr, 16));
         }
         #endif // __cpp_concepts >= 201907
 
-        constexpr CanId operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
+        constexpr CanId& operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
 
         template<typename T>
-        constexpr CanId operator |=(const T x) { return m_identifier |= x; } //!< Performs a bitwise OR operation on this ID and another.
+        constexpr CanId& operator |=(const T x) { m_identifier |= x; return *this; } //!< Performs a bitwise OR operation on this ID and another.
 
         template<typename T>
-        constexpr CanId operator &=(const T x) { return m_identifier &= x; } //!< Performs a bitwise AND operation on this ID and another.
+        constexpr CanId& operator &=(const T x) { m_identifier &= x; return *this; } //!< Performs a bitwise AND operation on this ID and another.
 
         template<typename T>
-        constexpr CanId operator ^=(const T x) { return m_identifier ^= x; } //!< Performs a bitwise XOR operation on this ID and another.
+        constexpr CanId& operator ^=(const T x) { m_identifier ^= x; return *this; } //!< Performs a bitwise XOR operation on this ID and another.
 #pragma endregion
 
 #pragma region "Arithmetic Operators"
