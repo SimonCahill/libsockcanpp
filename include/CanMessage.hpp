@@ -31,6 +31,9 @@
 #include <bit>
 #include <cstring>
 #include <exception>
+#if __cpp_lib_span >= 201907L
+#include <span>
+#endif // __cpp_lib_span >= 201907L
 #include <string>
 #include <system_error>
 #include <thread>
@@ -63,6 +66,8 @@ namespace sockcanpp {
      */
     template<typename Duration = std::chrono::milliseconds>
     class CanMessageT {
+        static_assert(std::is_trivially_copyable<can_frame>::value, "can_frame must be trivially copyable"); //!< Ensures that the can_frame structure is trivially copyable, which is necessary for efficient copying and moving of CAN messages.
+
         public: // +++ Constructor / Destructor +++
                                 CanMessageT() = default; //!< Default constructor, initializes an empty CAN message.
 
@@ -77,7 +82,7 @@ namespace sockcanpp {
              */
             explicit            CanMessageT(const CanId& canId, const string& frameData): m_canIdentifier(canId) {
                 if (frameData.size() > CAN_MAX_DLEN) {
-                    throw system_error(error_code(std::make_error_code(std::errc::message_size)), "Payload too big!");
+                    throw system_error(std::make_error_code(std::errc::message_size), "Payload too big!");
                 }
 
                 m_rawFrame.can_id = canId;
@@ -89,9 +94,14 @@ namespace sockcanpp {
                 m_timestampOffset = timestampOffset;
             } //!< Constructs a CAN message from a CAN ID and a frame data string with a timestamp offset.
 
+                                CanMessageT(const CanMessageT& other) = default; //!< Copy constructor.
+                                CanMessageT(CanMessageT&& other) noexcept = default; //!< Move constructor.
+                                CanMessageT& operator=(const CanMessageT& other) = default; //!< Copy assignment operator.
+                                CanMessageT& operator=(CanMessageT&& other) noexcept = default; //!< Move assignment operator.
+
             virtual ~           CanMessageT() = default;
 
-        public: // +++ Getters +++
+        public: // +++ Public API +++
             const CanId&        getCanId()      const noexcept { return m_canIdentifier; } //!< Returns the CAN ID of this message.
 
             const string        getFrameData()  const noexcept { return string{type_cast<const char*>(m_rawFrame.data), m_rawFrame.can_dlc}; } //!< Returns the frame data as a string.
@@ -99,10 +109,48 @@ namespace sockcanpp {
             const can_frame&    getRawFrame()   const noexcept { return m_rawFrame; } //!< Returns the raw can_frame structure of this message.
 
             const Duration&     getTimestampOffset() const noexcept { return m_timestampOffset; } //!< Returns the timestamp offset of this message.
+            
+            [[nodiscard]] constexpr bool isValid() const noexcept { return m_canIdentifier.isValidIdentifier(m_rawFrame.can_id); } //!< Checks if the CAN message is valid.
+
+            [[nodiscard]] constexpr bool isErrorFrame() const noexcept { return m_canIdentifier.hasErrorFrameFlag(); } //!< Checks if the CAN message is an error frame.
+
+            [[nodiscard]] constexpr bool isRemoteTransmissionRequest() const noexcept { return m_canIdentifier.hasRtrFrameFlag(); } //!< Checks if the CAN message is a remote transmission request.
+
+            [[nodiscard]] constexpr bool isStandardFrameId() const noexcept { return m_canIdentifier.isStandardFrameId(); } //!< Checks if the CAN message has a standard frame ID.
+
+            [[nodiscard]] constexpr bool isExtendedFrameId() const noexcept { return m_canIdentifier.isExtendedFrameId(); } //!< Checks if the CAN message has an extended frame ID.
 
             #if __cpp_lib_string_view >= 201803L
             string_view         getFrameDataView() const noexcept { return string_view(type_cast<const char*>(m_rawFrame.data), m_rawFrame.can_dlc); } //!< Returns a string_view of the frame data for better performance.
             #endif // __cpp_lib_string_view >= 201803L
+
+            #if __cpp_lib_span >= 202002L
+            /**
+             * @brief Returns the frame data as a byte array.
+             * 
+             * @return std::span<const std::byte> A span of the frame data as bytes.
+             */
+            std::span<const std::byte> getFrameDataAsBytes() const noexcept {
+                return std::span<const std::byte>(
+                    std::bit_cast<const std::byte*>(m_rawFrame.data),
+                    m_rawFrame.can_dlc * sizeof(uint8_t)
+                );
+            }
+            #endif // __cpp_lib_span >= 202002L
+
+        public: // +++ Equality Checks +++
+            bool                operator==(const CanMessageT& other) const noexcept {
+                return  m_canIdentifier == other.m_canIdentifier &&
+                        m_rawFrame.can_dlc == other.m_rawFrame.can_dlc &&
+                        std::equal(
+                            std::begin(m_rawFrame.data), std::begin(m_rawFrame.data) + m_rawFrame.can_dlc,
+                            std::begin(other.m_rawFrame.data), std::begin(other.m_rawFrame.data) + other.m_rawFrame.can_dlc
+                        );
+            } //!< Compares this CAN message to another for equality.
+
+            bool                operator!=(const CanMessageT& other) const noexcept {
+                return !(*this == other);
+            } //!< Compares this CAN message to another for inequality.
 
         private:
             CanId               m_canIdentifier{};
@@ -112,25 +160,8 @@ namespace sockcanpp {
             struct can_frame    m_rawFrame{};
     };
 
-    class CanMessage : public CanMessageT<> {
-        public: // +++ Constructor / Destructor +++
-                                CanMessage() = default; //!< Default constructor, initializes an empty CAN message.
+    using CanMessage = CanMessageT<std::chrono::milliseconds>; //!< Default CAN message type with milliseconds as the timestamp offset.
 
-            explicit            CanMessage(const struct can_frame& frame): CanMessageT(frame) { } //!< Constructs a CAN message from a raw can_frame structure.
-            explicit            CanMessage(const struct can_frame& frame, const milliseconds& timestampOffset): CanMessageT(frame, timestampOffset) { } //!< Constructs a CAN message from a raw can_frame structure with a timestamp offset.
-
-            /**
-             * @brief Constructs a CAN message from a CAN ID and a frame data string.
-             * 
-             * @param canId The CAN ID of the message.
-             * @param frameData The data of the CAN frame as a string.
-             */
-            explicit            CanMessage(const CanId& canId, const string& frameData): CanMessageT(canId, frameData) { }
-
-            explicit            CanMessage(const CanId& canId, const string& frameData, const milliseconds& timestampOffset): CanMessageT(canId, frameData, timestampOffset) { } //!< Constructs a CAN message from a CAN ID and a frame data string with a timestamp offset.
-
-            virtual ~           CanMessage() = default;
-    };
 }
 
 #endif // LIBSOCKCANPP_INCLUDE_CANMESSAGE_HPP
