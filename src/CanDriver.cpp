@@ -245,7 +245,7 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, microseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, microseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
 
     /**
      * @brief Attempts to send a queue of messages on the associated CAN bus.
@@ -256,7 +256,7 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, milliseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, milliseconds delay, bool forceExtended) { return sendMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
 
     /**
      * @brief Attempts to send a queue of messages on the associated CAN bus.
@@ -267,7 +267,7 @@ namespace sockcanpp {
      *
      * @return int32_t The total amount of bytes sent.
      */
-    ssize_t CanDriver::sendMessageQueue(queue<CanMessage> messages, nanoseconds delay, bool forceExtended) {
+    ssize_t CanDriver::sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay, bool forceExtended) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         ssize_t totalBytesWritten = 0;

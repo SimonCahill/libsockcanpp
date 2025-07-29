@@ -98,9 +98,9 @@ namespace sockcanpp {
             virtual CanMessage          readMessage(); //!< Attempts to read a single message from the bus
 
             virtual ssize_t             sendMessage(const CanMessage& message, bool forceExtended = false); //!< Attempts to send a single CAN message
-            virtual ssize_t             sendMessageQueue(queue<CanMessage> messages, microseconds delay = 20us, bool forceExtended = false); //!< Attempts to send a queue of messages
-            virtual ssize_t             sendMessageQueue(queue<CanMessage> messages, milliseconds delay = 20ms, bool forceExtended = false); //!< Attempts to send a queue of messages
-            virtual ssize_t             sendMessageQueue(queue<CanMessage> messages, nanoseconds delay = 20ns, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, microseconds delay = 20us, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, milliseconds delay = 20ms, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay = 20ns, bool forceExtended = false); //!< Attempts to send a queue of messages
              
             virtual queue<CanMessage>   readQueuedMessages(); //!< Attempts to read all queued messages from the bus
 
