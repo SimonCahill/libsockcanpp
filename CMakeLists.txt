@@ -40,6 +40,7 @@ endif()
 # If BUILD_TESTS is set to ON, a static test library with the name of the project suffixed with "_test" will be created
 ###
 if(BUILD_TESTS STREQUAL "ON")
+    enable_testing()
     add_library(${PROJECT_NAME}_test STATIC)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
 endif()
