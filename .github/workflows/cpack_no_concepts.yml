@@ -1,4 +1,4 @@
-name: Build and Pack
+name: Build and Pack (C++11)
 
 on:
   push:
