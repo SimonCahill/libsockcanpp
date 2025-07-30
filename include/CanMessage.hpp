@@ -137,8 +137,6 @@ namespace sockcanpp {
             const can_frame&    getRawFrame()   const noexcept { return m_rawFrame; } //!< Returns the raw can_frame structure of this message.
 
             const Duration&     getTimestampOffset() const noexcept { return m_timestampOffset; } //!< Returns the timestamp offset of this message.
-            
-            [[nodiscard]] constexpr bool isValid() const noexcept { return m_canIdentifier.isValidIdentifier(m_rawFrame.can_id); } //!< Checks if the CAN message is valid.
 
             [[nodiscard]] constexpr bool isErrorFrame() const noexcept { return m_canIdentifier.hasErrorFrameFlag(); } //!< Checks if the CAN message is an error frame.
 
