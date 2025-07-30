@@ -491,12 +491,12 @@ namespace sockcanpp {
 
         if (ioctl(m_socketFd, SIOCGIFINDEX, &ifaceRequest) < 0) {
             throw CanInitException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to perform IO control operation on socket %s! Error: %d => %s", m_canInterface.c_str(), errno,
                                     strerror(errno))
                 #else
                 std::format("FAILED to perform IO control operation on socket {0:s}! Error: {1:d} => {2:s}", m_canInterface, errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
 
