@@ -179,11 +179,11 @@ namespace sockcanpp {
             struct timeval tv{};
             if (ioctl(m_socketFd, SIOCGSTAMP, &tv) < 0) {
                 throw CanException(
-                    #if __cpp_lib_format <= 202002L
+                    #if __cpp_lib_format < 202002L
                     formatString("FAILED to read timestamp from socket! Error: %d => %s", errno, strerror(errno))
                     #else
                     std::format("FAILED to read timestamp from socket! Error: {0:d} => {1:s}", errno, strerror(errno))
-                    #endif // __cpp_lib_format <= 202002L
+                    #endif // __cpp_lib_format < 202002L
                 , m_socketFd);
             }
             return CanMessage{canFrame, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(tv.tv_sec) + std::chrono::microseconds(tv.tv_usec))};
