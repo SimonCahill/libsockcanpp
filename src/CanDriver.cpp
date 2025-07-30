@@ -166,11 +166,11 @@ namespace sockcanpp {
 
         if (read(m_socketFd, &canFrame, sizeof(can_frame)) < 0) {
             throw CanException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno))
                 #else
                 std::format("FAILED to read from CAN! Error: {0:d} => {1:s}", errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             , m_socketFd);
         }
 
