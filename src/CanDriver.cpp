@@ -166,11 +166,11 @@ namespace sockcanpp {
 
         if (read(m_socketFd, &canFrame, sizeof(can_frame)) < 0) {
             throw CanException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno))
                 #else
                 std::format("FAILED to read from CAN! Error: {0:d} => {1:s}", errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             , m_socketFd);
         }
 
@@ -179,11 +179,11 @@ namespace sockcanpp {
             struct timeval tv{};
             if (ioctl(m_socketFd, SIOCGSTAMP, &tv) < 0) {
                 throw CanException(
-                    #if __cpp_lib_format <= 202002L
+                    #if __cpp_lib_format < 202002L
                     formatString("FAILED to read timestamp from socket! Error: %d => %s", errno, strerror(errno))
                     #else
                     std::format("FAILED to read timestamp from socket! Error: {0:d} => {1:s}", errno, strerror(errno))
-                    #endif // __cpp_lib_format <= 202002L
+                    #endif // __cpp_lib_format < 202002L
                 , m_socketFd);
             }
             return CanMessage{canFrame, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(tv.tv_sec) + std::chrono::microseconds(tv.tv_usec))};
@@ -209,11 +209,11 @@ namespace sockcanpp {
 
         if (message.getFrameData().size() > CAN_MAX_DATA_LENGTH) {
             throw CanException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("INVALID data length! Message must be smaller than %d bytes!", CAN_MAX_DATA_LENGTH)
                 #else
                 std::format("INVALID data length! Message must be smaller than {0:d} bytes!", CAN_MAX_DATA_LENGTH)
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             , m_socketFd);
         }
 
@@ -225,11 +225,11 @@ namespace sockcanpp {
 
         if (bytesWritten < 0) {
             throw CanException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to write data to socket! Error: %d => %s", errno, strerror(errno))
                 #else
                 std::format("FAILED to write data to socket! Error: {0:d} => {1:s}", errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             , m_socketFd);
         }
 
@@ -428,11 +428,11 @@ namespace sockcanpp {
 
         if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &errorMask, sizeof(can_err_mask_t)) == -1) {
             throw CanInitException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to set CAN error filter on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno))
                 #else
                 std::format("FAILED to set CAN error filter on socket {0:d}! Error: {1:d} => {2:s}", m_socketFd, errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
     }
@@ -451,11 +451,11 @@ namespace sockcanpp {
 
         if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &receiveOwnMessages, sizeof(receiveOwnMessages)) == -1) {
             throw CanInitException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to set CAN message echo on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno))
                 #else
                 std::format("FAILED to set CAN message echo on socket {0:d}! Error: {1:d} => {2:s}", m_socketFd, errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
     }
@@ -479,11 +479,11 @@ namespace sockcanpp {
 
         if (m_socketFd == -1) {
             throw CanInitException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to initialise socketcan! Error: %d => %s", errno, strerror(errno))
                 #else
                 std::format("FAILED to initialise socketcan! Error: {0:d} => {1:s}", errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
 
@@ -491,12 +491,12 @@ namespace sockcanpp {
 
         if (ioctl(m_socketFd, SIOCGIFINDEX, &ifaceRequest) < 0) {
             throw CanInitException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to perform IO control operation on socket %s! Error: %d => %s", m_canInterface.c_str(), errno,
                                     strerror(errno))
                 #else
                 std::format("FAILED to perform IO control operation on socket {0:s}! Error: {1:d} => {2:s}", m_canInterface, errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
 
@@ -504,11 +504,11 @@ namespace sockcanpp {
         fdOptions |= O_NONBLOCK;
         if (fcntl(m_socketFd, F_SETFL, fdOptions) < 0) {
             throw CanInitException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to set non-blocking mode on socket %s! Error: %d => %s", m_canInterface.c_str(), errno, strerror(errno))
                 #else
                 std::format("FAILED to set non-blocking mode on socket {0:s}! Error: {1:d} => {2:s}", m_canInterface, errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
 
@@ -519,11 +519,11 @@ namespace sockcanpp {
 
         if (bind(m_socketFd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) < 0) {
             throw CanInitException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to bind to socket CAN! Error: %d => %s", errno, strerror(errno))
                 #else
                 std::format("FAILED to bind to socket CAN! Error: {0:d} => {1:s}", errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
     }
@@ -538,11 +538,11 @@ namespace sockcanpp {
 
         if (close(m_socketFd) == -1) {
             throw CanCloseException(
-                #if __cpp_lib_format <= 202002L
+                #if __cpp_lib_format < 202002L
                 formatString("FAILED to close CAN socket! Error: %d => %s", errno, strerror(errno))
                 #else
                 std::format("FAILED to close CAN socket! Error: {0:d} => {1:s}", errno, strerror(errno))
-                #endif // __cpp_lib_format <= 202002L
+                #endif // __cpp_lib_format < 202002L
             );
         }
 
