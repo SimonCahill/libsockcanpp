@@ -94,6 +94,28 @@ namespace sockcanpp {
                 m_timestampOffset = timestampOffset;
             } //!< Constructs a CAN message from a CAN ID and a frame data string with a timestamp offset.
 
+            #if __cpp_lib_span >= 201907L
+            /**
+             * @brief Constructs a CAN message from a CAN ID and a span of bytes.
+             * 
+             * @param canId The CAN ID of the message.
+             * @param frameData The data of the CAN frame as a span of bytes.
+             */
+            explicit            CanMessageT(const CanId& canId, const std::span<const uint8_t>& frameData): m_canIdentifier(canId) {
+                if (frameData.size() > CAN_MAX_DLEN) {
+                    throw system_error(std::make_error_code(std::errc::message_size), "Payload too big!");
+                }
+
+                m_rawFrame.can_id = canId;
+                std::copy(frameData.begin(), frameData.end(), m_rawFrame.data);
+                m_rawFrame.len = frameData.size();
+            }
+
+            explicit            CanMessageT(const CanId& canId, const std::span<const uint8_t>& frameData, const Duration& timestampOffset): CanMessageT(canId, frameData) {
+                m_timestampOffset = timestampOffset;
+            } //!< Constructs a CAN message from a CAN ID and a span of bytes with a timestamp offset.
+            #endif // __cpp_lib_span >= 201907L
+
                                 CanMessageT(const CanMessageT& other) = default; //!< Copy constructor.
                                 CanMessageT(CanMessageT&& other) noexcept = default; //!< Move constructor.
                                 CanMessageT& operator=(const CanMessageT& other) = default; //!< Copy assignment operator.
@@ -104,7 +126,13 @@ namespace sockcanpp {
         public: // +++ Public API +++
             const CanId&        getCanId()      const noexcept { return m_canIdentifier; } //!< Returns the CAN ID of this message.
 
-            const string        getFrameData()  const noexcept { return string{type_cast<const char*>(m_rawFrame.data), m_rawFrame.can_dlc}; } //!< Returns the frame data as a string.
+            const string        getFrameData()  const noexcept {
+                string data{};
+                data.reserve(m_rawFrame.len);
+                std::copy(std::begin(m_rawFrame.data), std::begin(m_rawFrame.data) + m_rawFrame.can_dlc, std::back_inserter(data));
+
+                return data;
+            } //!< Returns the frame data as a string.
 
             const can_frame&    getRawFrame()   const noexcept { return m_rawFrame; } //!< Returns the raw can_frame structure of this message.
 
@@ -119,24 +147,6 @@ namespace sockcanpp {
             [[nodiscard]] constexpr bool isStandardFrameId() const noexcept { return m_canIdentifier.isStandardFrameId(); } //!< Checks if the CAN message has a standard frame ID.
 
             [[nodiscard]] constexpr bool isExtendedFrameId() const noexcept { return m_canIdentifier.isExtendedFrameId(); } //!< Checks if the CAN message has an extended frame ID.
-
-            #if __cpp_lib_string_view >= 201803L
-            string_view         getFrameDataView() const noexcept { return string_view(type_cast<const char*>(m_rawFrame.data), m_rawFrame.can_dlc); } //!< Returns a string_view of the frame data for better performance.
-            #endif // __cpp_lib_string_view >= 201803L
-
-            #if __cpp_lib_span >= 202002L
-            /**
-             * @brief Returns the frame data as a byte array.
-             * 
-             * @return std::span<const std::byte> A span of the frame data as bytes.
-             */
-            std::span<const std::byte> getFrameDataAsBytes() const noexcept {
-                return std::span<const std::byte>(
-                    std::bit_cast<const std::byte*>(m_rawFrame.data),
-                    m_rawFrame.can_dlc * sizeof(uint8_t)
-                );
-            }
-            #endif // __cpp_lib_span >= 202002L
 
         public: // +++ Equality Checks +++
             bool                operator==(const CanMessageT& other) const noexcept {
