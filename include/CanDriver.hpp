@@ -45,7 +45,9 @@
  */
 namespace sockcanpp {
 
+    #if __cplusplus >= 201300
     using namespace std::chrono_literals;
+    #endif // __cplusplus >= 201300
 
     using std::chrono::microseconds;
     using std::chrono::milliseconds;
@@ -91,17 +93,35 @@ namespace sockcanpp {
             string                      getCanInterface() const { return this->m_canInterface; } //!< The CAN interface used by this instance.
 
         public: // +++ I/O +++
-            virtual bool                waitForMessages(microseconds timeout = 3000us); //!< Waits for CAN messages to appear
-            virtual bool                waitForMessages(milliseconds timeout = 3000ms); //!< Waits for CAN messages to appear
-            virtual bool                waitForMessages(nanoseconds timeout = 3000ns); //!< Waits for CAN messages to appear
+            #if __cplusplus >= 201300
+                #define sockcanpp_3KUS 3000us
+                #define sockcanpp_3KMS 3000ms
+                #define sockcanpp_3KNS 3000ns
+
+                #define sockcanpp_20US 20us
+                #define sockcanpp_20MS 20ms
+                #define sockcanpp_20NS 20ns
+            #else // C++11
+                #define sockcanpp_3KUS std::chrono::microseconds(3000)
+                #define sockcanpp_3KMS std::chrono::milliseconds(3000)
+                #define sockcanpp_3KNS std::chrono::nanoseconds(3000)
+
+                #define sockcanpp_20US std::chrono::microseconds(20)
+                #define sockcanpp_20MS std::chrono::milliseconds(20)
+                #define sockcanpp_20NS std::chrono::nanoseconds(20)
+            #endif // __cplusplus >= 201300
+
+            virtual bool                waitForMessages(microseconds timeout = sockcanpp_3KUS); //!< Waits for CAN messages to appear
+            virtual bool                waitForMessages(milliseconds timeout = sockcanpp_3KMS); //!< Waits for CAN messages to appear
+            virtual bool                waitForMessages(nanoseconds timeout = sockcanpp_3KNS); //!< Waits for CAN messages to appear
 
             virtual CanMessage          readMessage(); //!< Attempts to read a single message from the bus
 
             virtual ssize_t             sendMessage(const CanMessage& message, bool forceExtended = false); //!< Attempts to send a single CAN message
-            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, microseconds delay = 20us, bool forceExtended = false); //!< Attempts to send a queue of messages
-            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, milliseconds delay = 20ms, bool forceExtended = false); //!< Attempts to send a queue of messages
-            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay = 20ns, bool forceExtended = false); //!< Attempts to send a queue of messages
-             
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, microseconds delay = sockcanpp_20US, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, milliseconds delay = sockcanpp_20MS, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay = sockcanpp_20NS, bool forceExtended = false); //!< Attempts to send a queue of messages
+
             virtual queue<CanMessage>   readQueuedMessages(); //!< Attempts to read all queued messages from the bus
 
         public: // +++ Socket Management +++

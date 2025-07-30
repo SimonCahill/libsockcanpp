@@ -139,8 +139,16 @@ namespace sockcanpp {
 #pragma endregion
 
 #pragma region "Assignment Operators"
+        #if __cplusplus >= 201703L
         template<typename T>
         constexpr CanId& operator =(const T val) { m_identifier = val; return *this; } //!< Assigns a new integer to this CanID
+        #else
+        template<typename T>
+        CanId& operator =(const T val) {
+            m_identifier = static_cast<canid_t>(val);
+            return *this;
+        } //!< Assigns a new integer to this CanID
+        #endif // __cplusplus >= 201703L
 
         #if __cpp_concepts >= 201907
         template<Stringable T>
@@ -149,6 +157,8 @@ namespace sockcanpp {
         }
         #endif // __cpp_concepts >= 201907
 
+        
+        #if __cplusplus >= 201703L
         constexpr CanId& operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
 
         template<typename T>
@@ -159,6 +169,18 @@ namespace sockcanpp {
 
         template<typename T>
         constexpr CanId& operator ^=(const T x) { m_identifier ^= x; return *this; } //!< Performs a bitwise XOR operation on this ID and another.
+        #else
+        CanId& operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
+
+        template<typename T>
+        CanId& operator |=(const T x) { m_identifier |= x; return *this; } //!< Performs a bitwise OR operation on this ID and another.
+
+        template<typename T>
+        CanId& operator &=(const T x) { m_identifier &= x; return *this; } //!< Performs a bitwise AND operation on this ID and another.
+
+        template<typename T>
+        CanId& operator ^=(const T x) { m_identifier ^= x; return *this; } //!< Performs a bitwise XOR operation on this ID and another.
+        #endif // __cplusplus >= 201703L
 #pragma endregion
 
 #pragma region "Arithmetic Operators"

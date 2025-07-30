@@ -164,7 +164,7 @@ namespace sockcanpp {
         if (0 > m_socketFd) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
         can_frame canFrame{};
 
-        if (const auto readBytes = read(m_socketFd, &canFrame, sizeof(can_frame)); readBytes < 0) {
+        if (read(m_socketFd, &canFrame, sizeof(can_frame)) < 0) {
             throw CanException(
                 #if __cpp_lib_format <= 202002L
                 formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno))
@@ -489,7 +489,7 @@ namespace sockcanpp {
 
         std::copy(m_canInterface.begin(), m_canInterface.end(), ifaceRequest.ifr_name);
 
-        if (const auto ctrlVal = ioctl(m_socketFd, SIOCGIFINDEX, &ifaceRequest); ctrlVal == -1) {
+        if (ioctl(m_socketFd, SIOCGIFINDEX, &ifaceRequest) < 0) {
             throw CanInitException(
                 #if __cpp_lib_format <= 202002L
                 formatString("FAILED to perform IO control operation on socket %s! Error: %d => %s", m_canInterface.c_str(), errno,
@@ -502,7 +502,7 @@ namespace sockcanpp {
 
         fdOptions = fcntl(m_socketFd, F_GETFL);
         fdOptions |= O_NONBLOCK;
-        if (const auto retVal = fcntl(m_socketFd, F_SETFL, fdOptions); retVal != 0) {
+        if (fcntl(m_socketFd, F_SETFL, fdOptions) < 0) {
             throw CanInitException(
                 #if __cpp_lib_format <= 202002L
                 formatString("FAILED to set non-blocking mode on socket %s! Error: %d => %s", m_canInterface.c_str(), errno, strerror(errno))
@@ -517,7 +517,7 @@ namespace sockcanpp {
 
         setCanFilters(m_canFilterMask);
 
-        if (const auto bindVal = bind(m_socketFd, reinterpret_cast<sockaddr*>(&address), sizeof(address)); bindVal != 0) {
+        if (bind(m_socketFd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) < 0) {
             throw CanInitException(
                 #if __cpp_lib_format <= 202002L
                 formatString("FAILED to bind to socket CAN! Error: %d => %s", errno, strerror(errno))
