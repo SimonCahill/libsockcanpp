@@ -309,7 +309,22 @@ namespace sockcanpp {
                 can_frame canFrame{};
                 readBytes = read(m_socketFd, &canFrame, sizeof(can_frame));
                 if (readBytes >= 0) {
-                    messages.emplace(canFrame);
+                    if (m_collectTelemetry) {
+                        // Read timestamp from the socket if available.
+                        struct timeval tv{};
+                        if (ioctl(m_socketFd, SIOCGSTAMP, &tv) < 0) {
+                            throw CanException(
+                                #if __cpp_lib_format < 202002L
+                                formatString("FAILED to read timestamp from socket! Error: %d => %s", errno, strerror(errno))
+                                #else
+                                std::format("FAILED to read timestamp from socket! Error: {0:d} => {1:s}", errno, strerror(errno))
+                                #endif // __cpp_lib_format < 202002L
+                            , m_socketFd);
+                        }
+                        messages.emplace(CanMessage{canFrame, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(tv.tv_sec) + std::chrono::microseconds(tv.tv_usec))});
+                    } else {
+                        messages.emplace(canFrame);
+                    }
                 } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     more = false;
                 } else {
