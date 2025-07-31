@@ -176,20 +176,36 @@ namespace sockcanpp {
 
         if (m_collectTelemetry) {
             // Read timestamp from the socket if available.
-            struct timeval tv{};
-            if (ioctl(m_socketFd, SIOCGSTAMP, &tv) < 0) {
-                throw CanException(
-                    #if __cpp_lib_format < 202002L
-                    formatString("FAILED to read timestamp from socket! Error: %d => %s", errno, strerror(errno))
-                    #else
-                    std::format("FAILED to read timestamp from socket! Error: {0:d} => {1:s}", errno, strerror(errno))
-                    #endif // __cpp_lib_format < 202002L
-                , m_socketFd);
-            }
-            return CanMessage{canFrame, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(tv.tv_sec) + std::chrono::microseconds(tv.tv_usec))};
+            return CanMessage{canFrame, readFrameTimestamp()};
         }
 
         return CanMessage{canFrame};
+    }
+
+    milliseconds CanDriver::readFrameTimestamp() {
+        struct timeval tv{};
+        if (ioctl(m_socketFd, SIOCGSTAMP, &tv) < 0) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("FAILED to read timestamp from socket! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to read timestamp from socket! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format < 202002L
+            , m_socketFd);
+        }
+
+        if (!m_relativeTimestamps) {
+            return milliseconds(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+        }
+
+        // If relative timestamps are enabled, either return the delta between now and the first timestamp, or set the first timestamp
+        if (m_firstTimestamp.has_value()) {
+            auto relativeTime = milliseconds(tv.tv_sec * 1000 + tv.tv_usec / 1000) - m_firstTimestamp.value();
+            return relativeTime;
+        } else {
+            m_firstTimestamp = milliseconds(tv.tv_sec * 1000 + tv.tv_usec / 1000);
+            return milliseconds(0);
+        }
     }
     
     /**
@@ -311,17 +327,7 @@ namespace sockcanpp {
                 if (readBytes >= 0) {
                     if (m_collectTelemetry) {
                         // Read timestamp from the socket if available.
-                        struct timeval tv{};
-                        if (ioctl(m_socketFd, SIOCGSTAMP, &tv) < 0) {
-                            throw CanException(
-                                #if __cpp_lib_format < 202002L
-                                formatString("FAILED to read timestamp from socket! Error: %d => %s", errno, strerror(errno))
-                                #else
-                                std::format("FAILED to read timestamp from socket! Error: {0:d} => {1:s}", errno, strerror(errno))
-                                #endif // __cpp_lib_format < 202002L
-                            , m_socketFd);
-                        }
-                        messages.emplace(CanMessage{canFrame, std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::seconds(tv.tv_sec) + std::chrono::microseconds(tv.tv_usec))});
+                        messages.emplace(CanMessage{canFrame, readFrameTimestamp()});
                     } else {
                         messages.emplace(canFrame);
                     }

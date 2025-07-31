@@ -32,11 +32,19 @@
 #include <thread>
 #include <unordered_map>
 
+#if __cplusplus >= 201703L
+#include <optional>
+#endif // __cplusplus >= 201703L
+
 //////////////////////////////
 //      LOCAL  INCLUDES     //
 //////////////////////////////
 #include "CanId.hpp"
 #include "CanMessage.hpp"
+
+#if __cplusplus < 201703L
+#include "TlOptional.hpp"
+#endif // __cplusplus < 201703L
 
 /**
  * @brief Main library namespace.
@@ -48,6 +56,12 @@ namespace sockcanpp {
     #if __cplusplus >= 201300
     using namespace std::chrono_literals;
     #endif // __cplusplus >= 201300
+
+    #if __cplusplus >= 201703L
+    using std::optional;
+    #else
+    using tl::optional;
+    #endif // __cplusplus < 201703L
 
     using std::chrono::microseconds;
     using std::chrono::milliseconds;
@@ -135,6 +149,7 @@ namespace sockcanpp {
             virtual void                setCollectTelemetry(const bool enabled = true); //!< Sets the telemetry collection option for the interface
             virtual void                setErrorFilter(const bool enabled = true) const; //!< Sets the error filter for the interface
             virtual void                setReceiveOwnMessages(const bool enabled = true) const; //!< Sets the receive own messages option for the interface
+            virtual void                setReturnRelativeTimestamps(const bool enabled = true) { m_relativeTimestamps = enabled; }
 
         protected: // +++ Socket Management +++
             virtual void                initialiseSocketCan(); //!< Initialises socketcan
@@ -142,11 +157,13 @@ namespace sockcanpp {
 
         private: // +++ Member Functions +++
             virtual CanMessage          readMessageLock(bool const lock = true); //!< readMessage deadlock guard
+            virtual milliseconds        readFrameTimestamp();
 
         private: // +++ Variables +++
             bool        m_canReadQueueSize{true}; //!< Is the queue size available
             bool        m_collectTelemetry{false}; //!< Whether or not to collect telemetry data from the CAN bus
-            
+            bool        m_relativeTimestamps{false}; //!< Whether or not to use relative timestamps
+
             CanId       m_defaultSenderId; //!< The ID to send messages with if no other ID was set.
 
             filtermap_t m_canFilterMask; //!< The bit mask used to filter CAN messages
@@ -155,8 +172,9 @@ namespace sockcanpp {
             int32_t     m_socketFd{-1}; //!< The CAN socket file descriptor
             int32_t     m_queueSize{0}; //!< The size of the message queue read by waitForMessages()
 
-            //!< Mutex for thread-safety.
-            mutex       m_lock{};
+            optional<milliseconds>    m_firstTimestamp{};
+            
+            mutex       m_lock{}; //!< Mutex for thread-safety.
             mutex       m_lockSend{}; 
 
             string      m_canInterface; //!< The CAN interface used for communication (e.g. can0, can1, ...)
