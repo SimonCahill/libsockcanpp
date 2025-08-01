@@ -24,7 +24,11 @@ add_compile_options(
 )
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -s")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_link_options($<$<CONFIG:RELEASE>:-s>)
+endif()
 
 include(GNUInstallDirs)
 
