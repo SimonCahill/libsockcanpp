@@ -20,8 +20,8 @@
  *  limitations under the License.
  */
 
-#ifndef LIBSOCKPP_INCLUDE_CANID_HPP
-#define LIBSOCKPP_INCLUDE_CANID_HPP
+#ifndef LIBSOCKCANPP_INCLUDE_CANID_HPP
+#define LIBSOCKCANPP_INCLUDE_CANID_HPP
 
 //////////////////////////////
 //      SYSTEM INCLUDES     //
@@ -132,33 +132,55 @@ namespace sockcanpp {
         constexpr bool operator >(T x)               const { return static_cast<canid_t>(x) > m_identifier; } //!< Compares this ID to a 32-bit integer.
 
         template<typename T>
-        constexpr bool operator <=(const T x)        const { return x.m_identifier <= m_identifier; } //!< Compares this ID to another.
+        constexpr bool operator <=(const T x)        const { return m_identifier <= static_cast<canid_t>(x); } //!< Compares this ID to another.
 
         template<typename T>
-        constexpr bool operator >=(const T x)        const { return x.m_identifier >= m_identifier; } //!< Compares this ID to another.
+        constexpr bool operator >=(const T x)        const { return m_identifier >= static_cast<canid_t>(x); } //!< Compares this ID to another.
 #pragma endregion
 
 #pragma region "Assignment Operators"
+        #if __cplusplus >= 201703L
         template<typename T>
-        constexpr CanId operator =(const T val) { return CanId(val); } //!< Assigns a new integer to this CanID
+        constexpr CanId& operator =(const T val) { m_identifier = val; return *this; } //!< Assigns a new integer to this CanID
+        #else
+        template<typename T>
+        CanId& operator =(const T val) {
+            m_identifier = static_cast<canid_t>(val);
+            return *this;
+        } //!< Assigns a new integer to this CanID
+        #endif // __cplusplus >= 201703L
 
         #if __cpp_concepts >= 201907
         template<Stringable T>
-        CanId operator =(const T& val) {
+        CanId& operator =(const T& val) {
             return operator=(std::stoul(val.data(), nullptr, 16));
         }
         #endif // __cpp_concepts >= 201907
 
-        constexpr CanId operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
+        
+        #if __cplusplus >= 201703L
+        constexpr CanId& operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
 
         template<typename T>
-        constexpr CanId operator |=(const T x) { return m_identifier |= x; } //!< Performs a bitwise OR operation on this ID and another.
+        constexpr CanId& operator |=(const T x) { m_identifier |= x; return *this; } //!< Performs a bitwise OR operation on this ID and another.
 
         template<typename T>
-        constexpr CanId operator &=(const T x) { return m_identifier &= x; } //!< Performs a bitwise AND operation on this ID and another.
+        constexpr CanId& operator &=(const T x) { m_identifier &= x; return *this; } //!< Performs a bitwise AND operation on this ID and another.
 
         template<typename T>
-        constexpr CanId operator ^=(const T x) { return m_identifier ^= x; } //!< Performs a bitwise XOR operation on this ID and another.
+        constexpr CanId& operator ^=(const T x) { m_identifier ^= x; return *this; } //!< Performs a bitwise XOR operation on this ID and another.
+        #else
+        CanId& operator =(const int64_t val) { return operator =((canid_t)val); } //!< Assigns a 64-bit integer to this ID.
+
+        template<typename T>
+        CanId& operator |=(const T x) { m_identifier |= x; return *this; } //!< Performs a bitwise OR operation on this ID and another.
+
+        template<typename T>
+        CanId& operator &=(const T x) { m_identifier &= x; return *this; } //!< Performs a bitwise AND operation on this ID and another.
+
+        template<typename T>
+        CanId& operator ^=(const T x) { m_identifier ^= x; return *this; } //!< Performs a bitwise XOR operation on this ID and another.
+        #endif // __cplusplus >= 201703L
 #pragma endregion
 
 #pragma region "Arithmetic Operators"
@@ -269,4 +291,4 @@ namespace sockcanpp {
 
 }
 
-#endif // LIBSOCKPP_INCLUDE_CANID_HPP
+#endif // LIBSOCKCANPP_INCLUDE_CANID_HPP

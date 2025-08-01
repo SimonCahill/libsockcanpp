@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(sockcanpp LANGUAGES CXX VERSION 1.5.1 DESCRIPTION "A simple C++ wrapper for the Linux SocketCAN API" HOMEPAGE_URL "https://github.com/simoncahill/libsockcanpp")
+project(sockcanpp LANGUAGES CXX VERSION 1.6.0 DESCRIPTION "A simple C++ wrapper for the Linux SocketCAN API" HOMEPAGE_URL "https://github.com/simoncahill/libsockcanpp")
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
 option(BUILD_TESTS "Build the tests" OFF)
@@ -24,7 +24,11 @@ add_compile_options(
 )
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -s")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_link_options($<$<CONFIG:RELEASE>:-s>)
+endif()
 
 include(GNUInstallDirs)
 
@@ -40,6 +44,7 @@ endif()
 # If BUILD_TESTS is set to ON, a static test library with the name of the project suffixed with "_test" will be created
 ###
 if(BUILD_TESTS STREQUAL "ON")
+    enable_testing()
     add_library(${PROJECT_NAME}_test STATIC)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
 endif()
