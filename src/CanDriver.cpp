@@ -416,7 +416,7 @@ namespace sockcanpp {
 
         // Structured bindings only available with C++17
         #if __cplusplus >= 201703L
-        for (const auto [id, filter] : filters) {
+        for (const auto& [id, filter] : filters) {
             canFilters.push_back({*id, filter});
         }
         #else
