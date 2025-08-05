@@ -1,7 +1,7 @@
 /**
  * @file EnumCheck.hpp
  * @author Simon Cahill (contact@simonc.eu)
- * @brief Contains the implementation og a constexpr enumeration value checker.
+ * @brief Contains the implementation of a constexpr enumeration value checker.
  * @version 0.1
  * @date 2025-03-25
  * 
