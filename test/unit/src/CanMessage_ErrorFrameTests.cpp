@@ -12,10 +12,13 @@
 
 #include <CanMessage.hpp>
 
+#include <array>
+
 using sockcanpp::CanId;
 using sockcanpp::CanMessage;
 using namespace sockcanpp::can_errors;
 
+using std::array;
 using std::string;
 
 constexpr CanId g_testCanId(0x123);
@@ -113,9 +116,12 @@ TEST(CanMessageErrorFrameTests, CanMessage_ErrorFrame_ControllerProblem_ExpectRe
 }
 
 TEST(CanMessageErrorFrameTests, CanMessage_ErrorFrame_ProtocolError_ExpectCombinations) {
-    for (uint8_t i = 1; i < 0xff; i <<= 1) {
-        for (uint8_t j = 1; j < 0xff; j <<= 1) {
-            CanMessage msg(CanId(CAN_ERR_FLAG | CAN_ERR_PROT), string(1, i) + string(1, j));
+    array<uint8_t, 9> protType{ 0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 };
+    array<uint8_t, 20> protLocation{ 0x00, 0x03, 0x02, 0x06, 0x04, 0x05, 0x07, 0x0F, 0x0E, 0x0C, 0x0D, 0x09, 0x0B, 0x0A, 0x08, 0x18, 0x19, 0x1B, 0x1A, 0x12 };
+
+    for (const auto i : protType) {
+        for (const auto j : protLocation) {
+            CanMessage msg(CanId(CAN_ERR_FLAG | CAN_ERR_PROT), string({ static_cast<char>(0xff), static_cast<char>(0xff), static_cast<char>(i), static_cast<char>(j) }));
 
             ASSERT_TRUE(msg.hasProtocolViolation());
             ASSERT_EQ(msg.getProtocolError().errorCode, static_cast<ProtocolErrorCode>(i));
