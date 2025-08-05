@@ -321,21 +321,7 @@ namespace sockcanpp {
             bool more{true};
 
             do {
-                ssize_t readBytes;
-                can_frame canFrame{};
-                readBytes = read(m_socketFd, &canFrame, sizeof(can_frame));
-                if (readBytes >= 0) {
-                    if (m_collectTelemetry) {
-                        // Read timestamp from the socket if available.
-                        messages.emplace(CanMessage{canFrame, readFrameTimestamp()});
-                    } else {
-                        messages.emplace(canFrame);
-                    }
-                } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    more = false;
-                } else {
-                    throw CanException(formatString("FAILED to read from CAN! Error: %d => %s", errno, strerror(errno)), m_socketFd);
-                }
+                readMessageLock(false); // Read a message without locking the mutex
             } while (more);
         }
 

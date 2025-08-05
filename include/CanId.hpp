@@ -31,6 +31,7 @@
 #include <cmath>
 #include <exception>
 #include <linux/can.h>
+#include <linux/can/error.h>
 #include <system_error>
 
 #if __cpp_concepts >= 201907
@@ -269,13 +270,25 @@ namespace sockcanpp {
             }
 
         public: // +++ Getters +++
-            constexpr bool hasErrorFrameFlag() const { return isErrorFrame(m_identifier); } //!< Indicates whether or not this ID is an error frame.
-            constexpr bool hasRtrFrameFlag() const { return isRemoteTransmissionRequest(m_identifier); } //!< Indicates whether or not this ID is a remote transmission request.
-            constexpr bool isStandardFrameId() const { return !isExtendedFrame(m_identifier); } //!< Indicates whether or not this ID is a standard frame ID.
-            constexpr bool isExtendedFrameId() const { return isExtendedFrame(m_identifier); } //!< Indicates whether or not this ID is an extended frame ID.
+            constexpr bool hasErrorFrameFlag()  const { return isErrorFrame(m_identifier); } //!< Indicates whether or not this ID is an error frame.
+            constexpr bool hasRtrFrameFlag()    const { return isRemoteTransmissionRequest(m_identifier); } //!< Indicates whether or not this ID is a remote transmission request.
+            constexpr bool isStandardFrameId()  const { return !isExtendedFrame(m_identifier); } //!< Indicates whether or not this ID is a standard frame ID.
+            constexpr bool isExtendedFrameId()  const { return isExtendedFrame(m_identifier); } //!< Indicates whether or not this ID is an extended frame ID.
 
         public: // +++ Equality Checks +++
             constexpr bool equals(const CanId& otherId) const { return m_identifier == otherId.m_identifier; } //!< Compares this ID to another.
+
+        public: // +++ Error Frame Handling +++
+            constexpr bool hasBusError()            const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_BUSERROR); } //!< Checks if this ID has a bus error.
+            constexpr bool hasBusOffError()         const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_BUSOFF); } //!< Checks if this ID has a bus-off error.
+            constexpr bool hasControllerProblem()   const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_CRTL); } //!< Checks if this ID has a controller problem.
+            constexpr bool hasControllerRestarted() const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_RESTARTED); } //!< Checks if this ID has a controller restarted error.
+            constexpr bool hasErrorCounter()        const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_CNT); } //!< Checks if this ID has an error counter.
+            constexpr bool hasLostArbitration()     const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_LOSTARB); } //!< Checks if this ID has lost arbitration.
+            constexpr bool hasProtocolViolation()   const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_PROT); } //!< Checks if this ID has a protocol violation.
+            constexpr bool hasTransceiverStatus()   const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_TRX); } //!< Checks if this ID has a transceiver status error.
+            constexpr bool missingAckOnTransmit()   const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_ACK); } //!< Checks if this ID is missing an ACK on transmit.
+            constexpr bool isTxTimeout()            const { return hasErrorFrameFlag() && (m_identifier & CAN_ERR_TX_TIMEOUT); } //!< Checks if this ID is a transmission timeout error frame.
 
         private: // +++ Variables +++
             uint32_t m_identifier = 0;

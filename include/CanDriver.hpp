@@ -26,6 +26,7 @@
 //////////////////////////////
 //      SYSTEM INCLUDES     //
 //////////////////////////////
+#include <atomic>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -63,6 +64,7 @@ namespace sockcanpp {
     using tl::optional;
     #endif // __cplusplus < 201703L
 
+    using std::atomic;
     using std::chrono::microseconds;
     using std::chrono::milliseconds;
     using std::chrono::nanoseconds;
@@ -103,6 +105,8 @@ namespace sockcanpp {
 
             int32_t                     getMessageQueueSize() const { return this->m_queueSize; } //!< Gets the amount of CAN messages found after last calling waitForMessages()
             int32_t                     getSocketFd() const { return this->m_socketFd; } //!< The socket file descriptor used by this instance.
+
+            size_t                      getReceivedMessageCount() const { return this->m_receivedMessages.load(); } //!< The number of messages received by this instance.
 
             string                      getCanInterface() const { return this->m_canInterface; } //!< The CAN interface used by this instance.
 
@@ -160,24 +164,26 @@ namespace sockcanpp {
             virtual milliseconds        readFrameTimestamp();
 
         private: // +++ Variables +++
-            bool        m_canReadQueueSize{true}; //!< Is the queue size available
-            bool        m_collectTelemetry{false}; //!< Whether or not to collect telemetry data from the CAN bus
-            bool        m_relativeTimestamps{false}; //!< Whether or not to use relative timestamps
+            atomic<size_t>          m_receivedMessages{0}; //!< The number of received messages
 
-            CanId       m_defaultSenderId; //!< The ID to send messages with if no other ID was set.
+            bool                    m_canReadQueueSize{true}; //!< Is the queue size available
+            bool                    m_collectTelemetry{false}; //!< Whether or not to collect telemetry data from the CAN bus
+            bool                    m_relativeTimestamps{false}; //!< Whether or not to use relative timestamps
 
-            filtermap_t m_canFilterMask; //!< The bit mask used to filter CAN messages
+            CanId                   m_defaultSenderId; //!< The ID to send messages with if no other ID was set.
+
+            filtermap_t             m_canFilterMask; //!< The bit mask used to filter CAN messages
             
-            int32_t     m_canProtocol{CAN_RAW}; //!< The protocol used when communicating via CAN
-            int32_t     m_socketFd{-1}; //!< The CAN socket file descriptor
-            int32_t     m_queueSize{0}; //!< The size of the message queue read by waitForMessages()
+            int32_t                 m_canProtocol{CAN_RAW}; //!< The protocol used when communicating via CAN
+            int32_t                 m_socketFd{-1}; //!< The CAN socket file descriptor
+            int32_t                 m_queueSize{0}; //!< The size of the message queue read by waitForMessages()
 
-            optional<milliseconds>    m_firstTimestamp{};
+            optional<milliseconds>  m_firstTimestamp{};
             
-            mutex       m_lock{}; //!< Mutex for thread-safety.
-            mutex       m_lockSend{}; 
+            mutex                   m_lock{}; //!< Mutex for thread-safety.
+            mutex                   m_lockSend{}; 
 
-            string      m_canInterface; //!< The CAN interface used for communication (e.g. can0, can1, ...)
+            string                  m_canInterface; //!< The CAN interface used for communication (e.g. can0, can1, ...)
             
     };
 
