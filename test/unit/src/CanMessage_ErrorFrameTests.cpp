@@ -113,8 +113,8 @@ TEST(CanMessageErrorFrameTests, CanMessage_ErrorFrame_ControllerProblem_ExpectRe
 }
 
 TEST(CanMessageErrorFrameTests, CanMessage_ErrorFrame_ProtocolError_ExpectCombinations) {
-    for (uint8_t i = 0; i < 0xff; i <<= 1) {
-        for (uint8_t j = 0; j < 0xff; j <<= 1) {
+    for (uint8_t i = 1; i < 0xff; i <<= 1) {
+        for (uint8_t j = 1; j < 0xff; j <<= 1) {
             CanMessage msg(CanId(CAN_ERR_FLAG | CAN_ERR_PROT), string(1, i) + string(1, j));
 
             ASSERT_TRUE(msg.hasProtocolViolation());
