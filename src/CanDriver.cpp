@@ -321,7 +321,11 @@ namespace sockcanpp {
             bool more{true};
 
             do {
-                readMessageLock(false); // Read a message without locking the mutex
+                try {
+                    readMessageLock(false); // Read a message without locking the mutex
+                } catch (const std::exception& e) {
+                    more = false;
+                }
             } while (more);
         }
 
