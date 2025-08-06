@@ -42,6 +42,9 @@
 //      LOCAL  INCLUDES     //
 //////////////////////////////
 #include "CanId.hpp"
+#include "can_errors/CanControllerError.hpp"
+#include "can_errors/CanProtocolError.hpp"
+#include "can_errors/CanTransceiverError.hpp"
 
 namespace sockcanpp {
 
@@ -134,6 +137,15 @@ namespace sockcanpp {
                 return data;
             } //!< Returns the frame data as a string.
 
+            friend std::ostream& operator<<(std::ostream& os, const CanMessageT& msg) {
+                os << "CanMessage(canId: " << msg.getCanId() << ", data: ";
+                for (size_t i = 0; i < msg.m_rawFrame.can_dlc; ++i) {
+                    os << std::hex << static_cast<int>(msg.m_rawFrame.data[i]) << " ";
+                }
+                os << ", timestampOffset: " << msg.m_timestampOffset.count() << "ms)";
+                return os;
+            } //!< Outputs the CanMessage to a stream in a human-readable format.
+
             const can_frame&    getRawFrame()   const noexcept { return m_rawFrame; } //!< Returns the raw can_frame structure of this message.
 
             const Duration&     getTimestampOffset() const noexcept { return m_timestampOffset; } //!< Returns the timestamp offset of this message.
@@ -145,6 +157,26 @@ namespace sockcanpp {
             [[nodiscard]] constexpr bool isStandardFrameId() const noexcept { return m_canIdentifier.isStandardFrameId(); } //!< Checks if the CAN message has a standard frame ID.
 
             [[nodiscard]] constexpr bool isExtendedFrameId() const noexcept { return m_canIdentifier.isExtendedFrameId(); } //!< Checks if the CAN message has an extended frame ID.
+
+        public: // +++ Error Frame Handling +++
+            constexpr bool hasBusError()            const { return m_canIdentifier.hasBusError();               }
+            constexpr bool hasBusOffError()         const { return m_canIdentifier.hasBusOffError();            }
+            constexpr bool hasControllerProblem()   const { return m_canIdentifier.hasControllerProblem();      }
+            constexpr bool hasControllerRestarted() const { return m_canIdentifier.hasControllerRestarted();    }
+            constexpr bool hasErrorCounter()        const { return m_canIdentifier.hasErrorCounter();           }
+            constexpr bool hasLostArbitration()     const { return m_canIdentifier.hasLostArbitration();        }
+            constexpr bool hasProtocolViolation()   const { return m_canIdentifier.hasProtocolViolation();      }
+            constexpr bool hasTransceiverStatus()   const { return m_canIdentifier.hasTransceiverStatus();      }
+            constexpr bool missingAckOnTransmit()   const { return m_canIdentifier.missingAckOnTransmit();      }
+            constexpr bool isTxTimeout()            const { return m_canIdentifier.isTxTimeout();               }
+
+        public: // +++ Errors +++
+            can_errors::ControllerError     getControllerError()    const { return can_errors::ControllerError::fromErrorCode(static_cast<can_errors::ControllerErrorCode>(m_rawFrame.data[1])); }
+            can_errors::ProtocolError       getProtocolError()      const { return can_errors::ProtocolError::fromErrorCode(static_cast<can_errors::ProtocolErrorCode>(m_rawFrame.data[2]), static_cast<can_errors::ProtocolErrorLocation>(m_rawFrame.data[3])); }
+            can_errors::TransceiverError    getTransceiverError()   const { return can_errors::TransceiverError::fromErrorCode(static_cast<can_errors::TransceiverErrorCode>(m_rawFrame.data[4])); }
+            size_t                          getTxErrorCounter()     const { return m_rawFrame.data[6]; }
+            size_t                          getRxErrorCounter()     const { return m_rawFrame.data[7]; }
+            uint8_t                         arbitrationLostInBit()  const { return m_rawFrame.data[0]; }
 
         public: // +++ Equality Checks +++
             bool                operator==(const CanMessageT& other) const noexcept {
