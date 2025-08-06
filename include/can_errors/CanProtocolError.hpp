@@ -28,7 +28,7 @@ namespace sockcanpp { namespace can_errors {
      * @brief Contains a typesafe representation of CAN protocol error codes.
      */
     enum class ProtocolErrorCode: uint8_t {
-        UNSPECIFIED_ERROR   = CAN_ERR_CRTL_UNSPEC,  //!< Unspecified error occurred.
+        UNSPECIFIED_ERROR   = CAN_ERR_PROT_UNSPEC,  //!< Unspecified error occurred.
         SINGLE_BIT_ERROR    = CAN_ERR_PROT_BIT,     //!< A single bit error occurred.
         FRAME_FORMAT_ERROR  = CAN_ERR_PROT_FORM,    //!< A frame format error occurred.
         BIT_STUFFING_ERROR  = CAN_ERR_PROT_STUFF,   //!< A bit stuffing error occurred.
