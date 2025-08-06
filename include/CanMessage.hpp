@@ -137,6 +137,15 @@ namespace sockcanpp {
                 return data;
             } //!< Returns the frame data as a string.
 
+            friend std::ostream& operator<<(std::ostream& os, const CanMessageT& msg) {
+                os << "CanMessage(canId: " << msg.getCanId() << ", data: ";
+                for (size_t i = 0; i < msg.m_rawFrame.can_dlc; ++i) {
+                    os << std::hex << static_cast<int>(msg.m_rawFrame.data[i]) << " ";
+                }
+                os << ", timestampOffset: " << msg.m_timestampOffset.count() << "ms)";
+                return os;
+            } //!< Outputs the CanMessage to a stream in a human-readable format.
+
             const can_frame&    getRawFrame()   const noexcept { return m_rawFrame; } //!< Returns the raw can_frame structure of this message.
 
             const Duration&     getTimestampOffset() const noexcept { return m_timestampOffset; } //!< Returns the timestamp offset of this message.
@@ -165,9 +174,9 @@ namespace sockcanpp {
             can_errors::ControllerError     getControllerError()    const { return can_errors::ControllerError::fromErrorCode(static_cast<can_errors::ControllerErrorCode>(m_rawFrame.data[1])); }
             can_errors::ProtocolError       getProtocolError()      const { return can_errors::ProtocolError::fromErrorCode(static_cast<can_errors::ProtocolErrorCode>(m_rawFrame.data[2]), static_cast<can_errors::ProtocolErrorLocation>(m_rawFrame.data[3])); }
             can_errors::TransceiverError    getTransceiverError()   const { return can_errors::TransceiverError::fromErrorCode(static_cast<can_errors::TransceiverErrorCode>(m_rawFrame.data[4])); }
-            size_t              getTxErrorCounter()     const { return m_rawFrame.data[6]; }
-            size_t              getRxErrorCounter()     const { return m_rawFrame.data[7]; }
-            uint8_t             arbitrationLostInBit()  const { return m_rawFrame.data[0]; }
+            size_t                          getTxErrorCounter()     const { return m_rawFrame.data[6]; }
+            size_t                          getRxErrorCounter()     const { return m_rawFrame.data[7]; }
+            uint8_t                         arbitrationLostInBit()  const { return m_rawFrame.data[0]; }
 
         public: // +++ Equality Checks +++
             bool                operator==(const CanMessageT& other) const noexcept {

@@ -26,13 +26,17 @@
 //////////////////////////////
 //      SYSTEM INCLUDES     //
 //////////////////////////////
+// stl
 #include <algorithm>
 #include <bitset>
 #include <cmath>
 #include <exception>
+#include <ostream>
+#include <system_error>
+
+// libc
 #include <linux/can.h>
 #include <linux/can/error.h>
-#include <system_error>
 
 #if __cpp_concepts >= 201907
 template<typename Str>
@@ -74,6 +78,11 @@ namespace sockcanpp {
 
         public: // +++ Operators +++
             constexpr canid_t operator *() const { return m_identifier; } //!< Returns the raw CAN ID value.
+
+            friend std::ostream& operator <<(std::ostream& os, const CanId& id) {
+                os << std::hex << id.m_identifier;
+                return os;
+            } //!< Outputs the CanId to a stream in hexadecimal format.
 
 #pragma region "Conversions"
         constexpr operator int16_t()  const { return static_cast<int16_t>(m_identifier) & CAN_ERR_MASK; }
