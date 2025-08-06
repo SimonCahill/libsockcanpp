@@ -181,12 +181,12 @@ void handleErrorFrame(const CanMessage& msg) {
     const auto missingAckOnTransmit = msg.missingAckOnTransmit();
     const auto isTxTimeout = msg.isTxTimeout();
 
-    const auto controllerError = msg.getControllerError()
-    const auto protocolError = msg.getProtocolError()
-    const auto transceiverError = msg.getTransceiverError()
-    const auto txErrorCounter = msg.getTxErrorCounter()
-    const auto rxErrorCounter = msg.getRxErrorCounter()
-    const auto arbitrationLostInBit = msg.arbitrationLostInBit()
+    const auto controllerError = msg.getControllerError();
+    const auto protocolError = msg.getProtocolError();
+    const auto transceiverError = msg.getTransceiverError();
+    const auto txErrorCounter = msg.getTxErrorCounter();
+    const auto rxErrorCounter = msg.getRxErrorCounter();
+    const auto arbitrationLostInBit = msg.arbitrationLostInBit();
 }
 ```
 
