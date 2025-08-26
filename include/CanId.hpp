@@ -52,6 +52,10 @@ template<typename C>
 concept ConvertibleToCanId = Stringable<C> || Integral<C> || CChar<C>;
 #endif
 
+#ifndef CAN_ERR_CNT
+#define CAN_ERR_CNT 0x00000200U
+#endif // CAN_ERR_CNT
+
 namespace sockcanpp {
 
     using std::bitset;
