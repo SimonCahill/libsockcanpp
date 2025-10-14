@@ -64,6 +64,12 @@ namespace sockcanpp {
     using std::string_view; //!< Use string_view if available, otherwise use string.
     #endif // __cpp_lib_string_view
 
+    #if __cplusplus >= 201703L
+    #define NO_DISCARD [[nodiscard]]
+    #else
+    #define NO_DISCARD
+    #endif // __cplusplus >= 201703L
+
     /**
      * @brief Represents a CAN message that was received.
      */
@@ -150,13 +156,13 @@ namespace sockcanpp {
 
             const Duration&     getTimestampOffset() const noexcept { return m_timestampOffset; } //!< Returns the timestamp offset of this message.
 
-            [[nodiscard]] constexpr bool isErrorFrame() const noexcept { return m_canIdentifier.hasErrorFrameFlag(); } //!< Checks if the CAN message is an error frame.
+            NO_DISCARD constexpr bool isErrorFrame() const noexcept { return m_canIdentifier.hasErrorFrameFlag(); } //!< Checks if the CAN message is an error frame.
 
-            [[nodiscard]] constexpr bool isRemoteTransmissionRequest() const noexcept { return m_canIdentifier.hasRtrFrameFlag(); } //!< Checks if the CAN message is a remote transmission request.
+            NO_DISCARD constexpr bool isRemoteTransmissionRequest() const noexcept { return m_canIdentifier.hasRtrFrameFlag(); } //!< Checks if the CAN message is a remote transmission request.
 
-            [[nodiscard]] constexpr bool isStandardFrameId() const noexcept { return m_canIdentifier.isStandardFrameId(); } //!< Checks if the CAN message has a standard frame ID.
+            NO_DISCARD constexpr bool isStandardFrameId() const noexcept { return m_canIdentifier.isStandardFrameId(); } //!< Checks if the CAN message has a standard frame ID.
 
-            [[nodiscard]] constexpr bool isExtendedFrameId() const noexcept { return m_canIdentifier.isExtendedFrameId(); } //!< Checks if the CAN message has an extended frame ID.
+            NO_DISCARD constexpr bool isExtendedFrameId() const noexcept { return m_canIdentifier.isExtendedFrameId(); } //!< Checks if the CAN message has an extended frame ID.
 
         public: // +++ Error Frame Handling +++
             constexpr bool hasBusError()            const { return m_canIdentifier.hasBusError();               }
