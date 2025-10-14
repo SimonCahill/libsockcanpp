@@ -21,8 +21,6 @@ using namespace sockcanpp::can_errors;
 using std::array;
 using std::string;
 
-constexpr CanId g_testCanId(0x123);
-
 TEST(CanMessageErrorFrameTests, CanMessage_ErrorFrame_ExpectTxTimeout) {
     CanMessage msg(CanId(CAN_ERR_FLAG | CAN_ERR_TX_TIMEOUT), "");
 
