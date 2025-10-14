@@ -54,6 +54,13 @@ concept ConvertibleToCanId = Stringable<C> || Integral<C> || CChar<C>;
 #endif
 
 #ifndef CAN_ERR_CNT
+/**
+ * Fallback definition for CAN_ERR_CNT.
+ * The value 0x00000200U is defined by the Linux CAN subsystem (see <linux/can/error.h>).
+ * This fallback is provided in case the system headers do not define CAN_ERR_CNT,
+ * such as when building on non-Linux systems or with older kernel headers.
+ * See: https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/can/error.h
+ */
 #define CAN_ERR_CNT 0x00000200U
 #endif // CAN_ERR_CNT
 
