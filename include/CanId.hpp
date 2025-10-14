@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cmath>
+#include <cstdint>
 #include <exception>
 #include <ostream>
 #include <system_error>
