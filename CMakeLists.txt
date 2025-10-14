@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(sockcanpp LANGUAGES CXX VERSION 1.7.0 DESCRIPTION "A simple C++ wrapper for the Linux SocketCAN API" HOMEPAGE_URL "https://github.com/simoncahill/libsockcanpp")
+project(sockcanpp LANGUAGES CXX VERSION 1.7.1 DESCRIPTION "A simple C++ wrapper for the Linux SocketCAN API" HOMEPAGE_URL "https://github.com/simoncahill/libsockcanpp")
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
 option(BUILD_TESTS "Build the tests" OFF)
