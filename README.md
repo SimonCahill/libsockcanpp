@@ -89,12 +89,6 @@ using sockcanpp::exceptions::CanException;
 int main() {
 
     CanDriver cDriver{"can0", CAN_RAW}; // No default sender ID
-    
-    try {
-        cDriver.initialiseSocketCan();
-    } catch (CanException& ex) {
-        // handle failure
-    }
 
     sendCanFrame(cDriver);
     sendMultipleFrames(cDriver);
