@@ -155,9 +155,9 @@ namespace sockcanpp {
             virtual void                setReceiveOwnMessages(const bool enabled = true) const; //!< Sets the receive own messages option for the interface
             virtual void                setReturnRelativeTimestamps(const bool enabled = true) { m_relativeTimestamps = enabled; }
 
-        protected: // +++ Socket Management +++
-            virtual void                initialiseSocketCan(); //!< Initialises socketcan
-            virtual void                uninitialiseSocketCan(); //!< Uninitialises socketcan
+        private: // +++ Socket Management +++
+            void                        initialiseSocketCan(); //!< Initialises socketcan
+            void                        uninitialiseSocketCan(); //!< Uninitialises socketcan
 
         private: // +++ Member Functions +++
             virtual CanMessage          readMessageLock(bool const lock = true); //!< readMessage deadlock guard
