@@ -45,7 +45,7 @@ namespace sockcanpp { namespace exceptions {
             const char* what() const noexcept { return m_message.c_str(); }
 
         public: // +++ Getter +++
-            const int32_t getSocket() const { return m_socket; }
+            int32_t     getSocket() const { return m_socket; }
 
         private:
             int32_t m_socket;
