@@ -1977,7 +1977,7 @@ public:
   ///
   /// Rebinds this optional to the referee of `rhs` if there is one. Otherwise
   /// resets the stored value in `*this`.
-  template <class U> optional &operator=(const optional<U> &rhs) noexcept {
+  template <class U> optional &operator=(const optional<U> &rhs) {
     m_value = std::addressof(rhs.value());
     return *this;
   }

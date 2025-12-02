@@ -559,6 +559,19 @@ namespace sockcanpp {
 
         m_socketFd = -1;
     }
+
+    /**
+     * @brief Closes the underlying CAN socket without throwing exceptions.
+     */
+    void CanDriver::uninitialiseSocketCanNoThrow() noexcept {
+        try {
+            uninitialiseSocketCan();
+        } catch (const CanCloseException& e) {
+            #ifdef libsockcanpp_ENABLE_OUTPUT_ON_CLOSE_EXCEPTIONS
+            std::cerr << "Warning: CanCloseException caught while uninitialising CAN socket: " << e.what() << std::endl;
+            #endif // libsockcanpp_ENABLE_OUTPUT
+        }
+    }
 #pragma endregion
 
 } // namespace sockcanpp

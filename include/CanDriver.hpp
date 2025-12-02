@@ -94,7 +94,7 @@ namespace sockcanpp {
             CanDriver(const string& canInterface, const int32_t canProtocol, const int32_t filterMask, const CanId defaultSenderId = 0);
             CanDriver(const string& canInterface, const int32_t canProtocol, const filtermap_t& filters, const CanId defaultSenderId = 0);
             CanDriver() = default;
-            virtual ~CanDriver() { uninitialiseSocketCan(); } //!< Destructor
+            virtual ~CanDriver() { uninitialiseSocketCanNoThrow(); } //!< Destructor
 
         public: // +++ Getter / Setter +++
             CanDriver&                  setDefaultSenderId(const CanId& id) { this->m_defaultSenderId = id; return *this; } //!< Sets the default sender ID
@@ -158,6 +158,7 @@ namespace sockcanpp {
         private: // +++ Socket Management +++
             void                        initialiseSocketCan(); //!< Initialises socketcan
             void                        uninitialiseSocketCan(); //!< Uninitialises socketcan
+            void                        uninitialiseSocketCanNoThrow() noexcept; //!< Uninitialises socketcan without throwing exceptions
 
         private: // +++ Member Functions +++
             virtual CanMessage          readMessageLock(bool const lock = true); //!< readMessage deadlock guard
