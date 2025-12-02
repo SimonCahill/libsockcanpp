@@ -38,5 +38,5 @@ jobs:
 
     - name: CppCheck
       # Build your program with the given configuration
-      run: cppcheck --project=${{github.workspace}}/build/compile_commands.json
+      run: cppcheck --project=${{github.workspace}}/build/compile_commands.json --check-level=exhaustive --enable=all --inconclusive --force --inline-suppr --quiet
 
