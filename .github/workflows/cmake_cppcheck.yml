@@ -1,4 +1,6 @@
 name: CppCheck
+permissions:
+  contents: read
 
 on:
   push:
