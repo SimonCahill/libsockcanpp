@@ -569,7 +569,7 @@ namespace sockcanpp {
         } catch (const CanCloseException& e) {
             #ifdef libsockcanpp_ENABLE_OUTPUT_ON_CLOSE_EXCEPTIONS
             std::cerr << "Warning: CanCloseException caught while uninitialising CAN socket: " << e.what() << std::endl;
-            #endif // libsockcanpp_ENABLE_OUTPUT
+            #endif // libsockcanpp_ENABLE_OUTPUT_ON_CLOSE_EXCEPTIONS
         }
     }
 #pragma endregion
