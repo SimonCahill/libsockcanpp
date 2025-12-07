@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=/usr/local/bin
+libdir=/usr/local/lib
+includedir=/usr/local/include
+
+Name: sockcanpp
+Description: A C++ user-space CAN bus driver for Linux (using socketCAN).
+Version: 1.7.4
+Libs: -L${libdir} -lsockcanpp
+Cflags: -I${includedir}
