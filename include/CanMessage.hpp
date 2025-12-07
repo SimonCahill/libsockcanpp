@@ -117,7 +117,7 @@ namespace sockcanpp {
 
                 m_rawFrame.can_id = canId;
                 std::copy(frameData.begin(), frameData.end(), m_rawFrame.data);
-                m_rawFrame.len = frameData.size();
+                m_rawFrame.can_dlc = frameData.size();
             }
 
             explicit            CanMessageT(const CanId& canId, const std::span<const uint8_t>& frameData, const Duration& timestampOffset): CanMessageT(canId, frameData) {
@@ -137,7 +137,7 @@ namespace sockcanpp {
 
             const string        getFrameData()  const noexcept {
                 string data{};
-                data.reserve(m_rawFrame.len);
+                data.reserve(m_rawFrame.can_dlc);
                 std::copy(std::begin(m_rawFrame.data), std::begin(m_rawFrame.data) + m_rawFrame.can_dlc, std::back_inserter(data));
 
                 return data;
