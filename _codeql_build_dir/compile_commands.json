@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/runner/work/libsockcanpp/libsockcanpp/_codeql_build_dir",
-  "command": "/home/runner/work/libsockcanpp/.codeql-scratch/dbs/cpp/working/autobuild/bin/c++ -Dsockcanpp_EXPORTS -I/home/runner/work/libsockcanpp/libsockcanpp/include -O3 -DNDEBUG -O2 -std=gnu++20 -fPIC -Wall -Werror -Wpedantic -Wno-unknown-pragmas -o CMakeFiles/sockcanpp.dir/src/CanDriver.cpp.o -c /home/runner/work/libsockcanpp/libsockcanpp/src/CanDriver.cpp",
-  "file": "/home/runner/work/libsockcanpp/libsockcanpp/src/CanDriver.cpp",
-  "output": "CMakeFiles/sockcanpp.dir/src/CanDriver.cpp.o"
-}
-]
