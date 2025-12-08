@@ -1,0 +1,80 @@
+name: Build and Pack (Debian Versions)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-and-pack:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Debian 12 (Bookworm)
+            image: debian:12
+            version: "12"
+          - name: Debian 11 (Bullseye)
+            image: debian:11
+            version: "11"
+          - name: Debian 10 (Buster)
+            image: debian:10
+            version: "10"
+          - name: Debian 9 (Stretch)
+            image: debian:9
+            version: "9"
+          - name: Debian 8 (Jessie)
+            image: debian:8
+            version: "8"
+
+    steps:
+    - name: Prepare environment
+      shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        set -euo pipefail
+        if [[ -f /etc/os-release ]]; then
+          . /etc/os-release
+          if [[ "${ID}" == "debian" ]]; then
+            case "${VERSION_ID}" in
+              8*|9*|10*)
+                sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list
+                sed -i '/security.debian.org/d' /etc/apt/sources.list
+                if [[ -n "${VERSION_CODENAME:-}" ]]; then
+                  printf '\ndeb http://archive.debian.org/debian-security %s/updates main contrib non-free\n' "${VERSION_CODENAME}" >> /etc/apt/sources.list
+                fi
+                echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99disable-check-valid-until
+                ;;
+            esac
+          fi
+        fi
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          build-essential \
+          ca-certificates \
+          cmake \
+          git \
+          pkg-config \
+          can-utils \
+          libsocketcan-dev
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Pack
+      working-directory: ${{github.workspace}}/build
+      run: cpack .

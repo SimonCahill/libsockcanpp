@@ -1,0 +1,44 @@
+name: Build and Pack (Arch Linux)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-and-pack:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+    - name: Prepare environment
+      shell: bash
+      env:
+        CI: "true"
+      run: |
+        set -euo pipefail
+        pacman -Sy --noconfirm archlinux-keyring
+        pacman -Syu --noconfirm --needed \
+          base-devel \
+          cmake \
+          git \
+          pkgconf \
+          can-utils \
+          libsocketcan
+        yes | pacman -Scc >/dev/null
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Pack
+      working-directory: ${{github.workspace}}/build
+      run: cpack .
