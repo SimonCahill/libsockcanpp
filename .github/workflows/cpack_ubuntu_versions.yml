@@ -40,9 +40,6 @@ jobs:
           - name: CPack Ubuntu 19.04
             image: ubuntu:19.04
             version: "19.04"
-          - name: CPack Ubuntu 18.04
-            image: ubuntu:18.04
-            version: "18.04"
 
     steps:
     - name: Prepare environment
