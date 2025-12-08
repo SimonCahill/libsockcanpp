@@ -28,7 +28,9 @@
 //////////////////////////////
 #include <linux/can.h>
 
+#if __cpp_lib_bit_cast >= 201806L
 #include <bit>
+#endif // __cpp_lib_bit_cast >= 201806L
 #include <cstring>
 #include <exception>
 #if __cpp_lib_span >= 201907L
@@ -117,7 +119,7 @@ namespace sockcanpp {
 
                 m_rawFrame.can_id = canId;
                 std::copy(frameData.begin(), frameData.end(), m_rawFrame.data);
-                m_rawFrame.len = frameData.size();
+                m_rawFrame.can_dlc = frameData.size();
             }
 
             explicit            CanMessageT(const CanId& canId, const std::span<const uint8_t>& frameData, const Duration& timestampOffset): CanMessageT(canId, frameData) {
@@ -137,7 +139,7 @@ namespace sockcanpp {
 
             const string        getFrameData()  const noexcept {
                 string data{};
-                data.reserve(m_rawFrame.len);
+                data.reserve(m_rawFrame.can_dlc);
                 std::copy(std::begin(m_rawFrame.data), std::begin(m_rawFrame.data) + m_rawFrame.can_dlc, std::back_inserter(data));
 
                 return data;

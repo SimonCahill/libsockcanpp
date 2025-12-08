@@ -1,0 +1,62 @@
+name: Build and Pack (Fedora Versions)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-and-pack:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Fedora 41
+            image: fedora:41
+          - name: Fedora 40
+            image: fedora:40
+          - name: Fedora 39
+            image: fedora:39
+
+    steps:
+    - name: Prepare environment
+      shell: bash
+      run: |
+        set -euo pipefail
+        dnf -y update
+        dnf -y install \
+          cmake \
+          gcc \
+          gcc-c++ \
+          make \
+          git \
+          pkgconf-pkg-config \
+          can-utils \
+          libsocketcan \
+          libsocketcan-devel \
+          wget \
+          rpm-build
+
+        dnf clean all
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        cd ${{github.workspace}}/build
+        cpack .

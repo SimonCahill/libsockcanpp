@@ -1,0 +1,86 @@
+name: Build and Pack (Ubuntu Versions)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-and-pack:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: CPack Ubuntu 24.04
+            image: ubuntu:24.04
+            version: "24.04"
+          - name: CPack Ubuntu 23.04
+            image: ubuntu:23.04
+            version: "23.04"
+          - name: CPack Ubuntu 22.04
+            image: ubuntu:22.04
+            version: "22.04"
+          - name: CPack Ubuntu 21.04
+            image: ubuntu:21.04
+            version: "21.04"
+          - name: CPack Ubuntu 20.04
+            image: ubuntu:20.04
+            version: "20.04"
+          - name: CPack Ubuntu 19.04
+            image: ubuntu:19.04
+            version: "19.04"
+
+    steps:
+    - name: Prepare environment
+      shell: bash
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        set -euo pipefail
+        if [[ -f /etc/os-release ]]; then
+          . /etc/os-release
+          if [[ "${ID}" == "ubuntu" ]]; then
+            case "${VERSION_ID}" in
+              19.04|21.04|23.04)
+                sed -i 's|http://archive.ubuntu.com/ubuntu/|http://old-releases.ubuntu.com/ubuntu/|g' /etc/apt/sources.list
+                sed -i 's|http://security.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+                ;;
+            esac
+          fi
+        fi
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          build-essential \
+          ca-certificates \
+          git \
+          pkg-config \
+          can-utils \
+          libsocketcan-dev \
+          wget \
+          rpm
+
+        wget https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-linux-x86_64.sh -O /tmp/cmake-installer.sh
+        chmod +x /tmp/cmake-installer.sh
+        /tmp/cmake-installer.sh --skip-license --prefix=/usr/local
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        cd ${{github.workspace}}/build
+        cpack .
