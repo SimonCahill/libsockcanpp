@@ -63,12 +63,15 @@ jobs:
         apt-get install -y --no-install-recommends \
           build-essential \
           ca-certificates \
-          cmake \
           git \
           pkg-config \
           can-utils \
           libsocketcan-dev \
           wget
+
+        wget https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-linux-x86_64.sh -O /tmp/cmake-installer.sh
+        chmod +x /tmp/cmake-installer.sh
+        /tmp/cmake-installer.sh --skip-license --prefix=/usr/local
 
     - uses: actions/checkout@v4
 
