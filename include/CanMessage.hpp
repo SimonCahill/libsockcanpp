@@ -28,7 +28,9 @@
 //////////////////////////////
 #include <linux/can.h>
 
+#if __cpp_lib_bit_cast >= 201806L
 #include <bit>
+#endif // __cpp_lib_bit_cast >= 201806L
 #include <cstring>
 #include <exception>
 #if __cpp_lib_span >= 201907L
