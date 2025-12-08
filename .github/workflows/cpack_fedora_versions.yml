@@ -44,7 +44,10 @@ jobs:
           pkgconf-pkg-config \
           can-utils \
           libsocketcan \
-          libsocketcan-devel
+          libsocketcan-devel \
+          wget \
+          rpm
+
         dnf clean all
 
     - uses: actions/checkout@v4
