@@ -70,7 +70,8 @@ jobs:
           git \
           pkg-config \
           can-utils \
-          libsocketcan-dev
+          libsocketcan-dev \
+          wget
 
     - uses: actions/checkout@v4
 
