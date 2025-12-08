@@ -46,7 +46,7 @@ jobs:
           libsocketcan \
           libsocketcan-devel \
           wget \
-          rpm
+          rpm-build
 
         dnf clean all
 
