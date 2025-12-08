@@ -62,7 +62,8 @@ jobs:
           pkg-config \
           can-utils \
           libsocketcan-dev \
-          wget
+          wget \
+          rpm
 
         wget https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-linux-x86_64.sh -O /tmp/cmake-installer.sh
         chmod +x /tmp/cmake-installer.sh
