@@ -19,49 +19,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Ubuntu 25.04
+          - name: CMake Ubuntu 25.04
             image: ubuntu:25.04
             version: "25.04"
-          - name: Ubuntu 24.10
-            image: ubuntu:24.10
-            version: "24.10"
-          - name: Ubuntu 24.04
+          - name: CMake Ubuntu 24.04
             image: ubuntu:24.04
             version: "24.04"
-          - name: Ubuntu 23.10
-            image: ubuntu:23.10
-            version: "23.10"
-          - name: Ubuntu 23.04
+          - name: CMake Ubuntu 23.04
             image: ubuntu:23.04
             version: "23.04"
-          - name: Ubuntu 22.10
-            image: ubuntu:22.10
-            version: "22.10"
-          - name: Ubuntu 22.04
+          - name: CMake Ubuntu 22.04
             image: ubuntu:22.04
             version: "22.04"
-          - name: Ubuntu 21.10
-            image: ubuntu:21.10
-            version: "21.10"
-          - name: Ubuntu 21.04
+          - name: CMake Ubuntu 21.04
             image: ubuntu:21.04
             version: "21.04"
-          - name: Ubuntu 20.10
-            image: ubuntu:20.10
-            version: "20.10"
-          - name: Ubuntu 20.04
+          - name: CMake Ubuntu 20.04
             image: ubuntu:20.04
             version: "20.04"
-          - name: Ubuntu 19.10
-            image: ubuntu:19.10
-            version: "19.10"
-          - name: Ubuntu 19.04
+          - name: CMake Ubuntu 19.04
             image: ubuntu:19.04
             version: "19.04"
-          - name: Ubuntu 18.10
-            image: ubuntu:18.10
-            version: "18.10"
-          - name: Ubuntu 18.04
+          - name: CMake Ubuntu 18.04
             image: ubuntu:18.04
             version: "18.04"
 
@@ -76,7 +55,7 @@ jobs:
           . /etc/os-release
           if [[ "${ID}" == "ubuntu" ]]; then
             case "${VERSION_ID}" in
-              18.04|18.10|19.04|19.10|20.10|21.04|21.10|22.10|23.04|23.10)
+              18.04|19.04|20.04|21.04|22.04|23.04)
                 sed -i 's|http://archive.ubuntu.com/ubuntu/|http://old-releases.ubuntu.com/ubuntu/|g' /etc/apt/sources.list
                 sed -i 's|http://security.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list
                 ;;
