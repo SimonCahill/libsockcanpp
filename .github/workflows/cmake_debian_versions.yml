@@ -52,7 +52,7 @@ jobs:
                 if [[ -n "${VERSION_CODENAME:-}" ]]; then
                   printf '\ndeb http://archive.debian.org/debian-security %s/updates main contrib non-free\n' "${VERSION_CODENAME}" >> /etc/apt/sources.list
                 fi
-                echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99disable-check-valid-until
+                printf "\n\nAcquire::Check-Valid-Until \"false\";\n" >> /etc/apt/apt.conf
                 ;;
             esac
           fi
