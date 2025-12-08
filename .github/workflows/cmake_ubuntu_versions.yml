@@ -43,9 +43,6 @@ jobs:
           - name: CMake Ubuntu 19.04
             image: ubuntu:19.04
             version: "19.04"
-          - name: CMake Ubuntu 18.04
-            image: ubuntu:18.04
-            version: "18.04"
 
     steps:
     - name: Prepare environment
@@ -59,8 +56,8 @@ jobs:
           if [[ "${ID}" == "ubuntu" ]]; then
             case "${VERSION_ID}" in
               18.04|19.04|20.04|21.04|22.04|23.04)
-                sed -i 's|http://archive.ubuntu.com/ubuntu/|http://old-releases.ubuntu.com/ubuntu/|g' /etc/apt/sources.list
-                sed -i 's|http://security.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+                # sed -i 's|http://archive.ubuntu.com/ubuntu/|http://old-releases.ubuntu.com/ubuntu/|g' /etc/apt/sources.list
+                # sed -i 's|http://security.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list
                 ;;
             esac
           fi
