@@ -37,6 +37,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -101,7 +102,7 @@ namespace sockcanpp {
     bool CanDriver::waitForMessages(microseconds timeout/* = microseconds(3000)*/) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock locky{m_lock};
+        unique_lock<mutex> locky{m_lock};
 
         fd_set readFileDescriptors;
         timeval waitTime{0, static_cast<suseconds_t>(timeout.count())};
@@ -167,7 +168,13 @@ namespace sockcanpp {
     CanMessage CanDriver::readMessageLock(bool const lock /* = true */) {
         unique_ptr<unique_lock<mutex>> locky{nullptr};
 
-        if (lock) { locky = std::make_unique<unique_lock<mutex>>(m_lock); }
+        if (lock) {
+            #if __cplusplus >= 201300
+                locky = std::make_unique<unique_lock<mutex>>(m_lock);
+            #else
+                locky = unique_ptr<unique_lock<mutex>>(new unique_lock<mutex>(m_lock));
+            #endif // __cplusplus >= 201300
+        }
         
         if (0 > m_socketFd) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
         can_frame canFrame{};
@@ -198,7 +205,13 @@ namespace sockcanpp {
     CanFdMessage CanDriver::readCanFdMessageLock(bool const lock /* = true */) {
         unique_ptr<unique_lock<mutex>> locky{nullptr};
 
-        if (lock) { locky = std::make_unique<unique_lock<mutex>>(m_lock); }
+        if (lock) {
+            #if __cplusplus >= 201300
+                locky = std::make_unique<unique_lock<mutex>>(m_lock);
+            #else
+                locky = unique_ptr<unique_lock<mutex>>(new unique_lock<mutex>(m_lock));
+            #endif // __cplusplus >= 201300
+        }
 
         if (0 > m_socketFd) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
         canfd_frame canFrame{};
@@ -279,7 +292,7 @@ namespace sockcanpp {
     ssize_t CanDriver::sendMessage(const CanMessage& message, bool forceExtended) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock locky(m_lockSend);
+        unique_lock<mutex> locky(m_lockSend);
 
         ssize_t bytesWritten = 0;
 
@@ -323,7 +336,7 @@ namespace sockcanpp {
     ssize_t CanDriver::sendCanFdMessage(const CanFdMessage& message, bool forceExtended) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock locky(m_lockSend);
+        unique_lock<mutex> locky(m_lockSend);
 
         if (message.getPayloadLength() > CANFD_MAX_DATA_LENGTH) {
             throw CanException(
@@ -458,7 +471,7 @@ namespace sockcanpp {
     queue<CanMessage> CanDriver::readQueuedMessages() {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock locky{m_lock};
+        unique_lock<mutex> locky{m_lock};
         queue<CanMessage> messages{};
 
         if (m_canReadQueueSize) {
@@ -490,7 +503,7 @@ namespace sockcanpp {
     queue<CanFdMessage> CanDriver::readQueuedCanFdMessages() {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock locky{m_lock};
+        unique_lock<mutex> locky{m_lock};
         queue<CanFdMessage> messages{};
 
         if (m_canReadQueueSize) {
@@ -544,7 +557,7 @@ namespace sockcanpp {
 
         int32_t canXlFrames = enabled ? 1 : 0;
 
-        unique_lock locky{m_lock};
+        unique_lock<mutex> locky{m_lock};
         if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canXlFrames, sizeof(canXlFrames)) == -1) {
             throw CanInitException(formatString("FAILED to set CAN XL frames on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
@@ -583,7 +596,7 @@ namespace sockcanpp {
     void CanDriver::setCanFilters(const filtermap_t& filters) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock locky{m_lock};
+        unique_lock<mutex> locky{m_lock};
         vector<can_filter> canFilters{};
 
         // Structured bindings only available with C++17
@@ -725,7 +738,7 @@ namespace sockcanpp {
      * @brief Closes the underlying CAN socket.
      */
     void CanDriver::uninitialiseSocketCan() {
-        unique_lock locky(m_lock);
+        unique_lock<mutex> locky(m_lock);
 
         if (m_socketFd <= 0) { throw CanCloseException("Cannot close invalid socket!"); }
 
