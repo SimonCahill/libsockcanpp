@@ -5,6 +5,7 @@ target_sources(${PROJECT_NAME}
     BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
     FILES 
         CanDriver.hpp
+        CanFdMessage.hpp
         CanId.hpp
         CanMessage.hpp
         exceptions/CanCloseException.hpp
@@ -22,6 +23,7 @@ if (TARGET sockcanpp_test)
         BASE_DIRS ${CMAKE_CURRENT_LIST_DIR}
         FILES 
             CanDriver.hpp
+            CanFdMessage.hpp
             CanId.hpp
             CanMessage.hpp
             exceptions/CanCloseException.hpp
