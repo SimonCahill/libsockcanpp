@@ -225,12 +225,14 @@ namespace sockcanpp {
         }
 
         if (bytesRead == CAN_MTU) {
-            const auto* classicFrame = reinterpret_cast<const can_frame*>(&canFrame);
+            can_frame classicFrame{};
+            std::memcpy(&classicFrame, &canFrame, sizeof(classicFrame));
+
             if (m_collectTelemetry) {
-                return CanFdMessage{*classicFrame, readFrameTimestamp()};
+                return CanFdMessage{classicFrame, readFrameTimestamp()};
             }
 
-            return CanFdMessage{*classicFrame};
+            return CanFdMessage{classicFrame};
         }
 
         if (m_collectTelemetry) {
