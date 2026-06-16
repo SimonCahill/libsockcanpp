@@ -114,13 +114,13 @@ namespace sockcanpp {
 
         public: // +++ I/O +++
             #if __cplusplus >= 201300
-                constexpr auto sockcanpp_3KUS = 3000us;
-                constexpr auto sockcanpp_3KMS = 3000ms;
-                constexpr auto sockcanpp_3KNS = 3000ns;
+                static constexpr auto sockcanpp_3KUS = 3000us;
+                static constexpr auto sockcanpp_3KMS = 3000ms;
+                static constexpr auto sockcanpp_3KNS = 3000ns;
 
-                constexpr auto sockcanpp_20US = 20us;
-                constexpr auto sockcanpp_20MS = 20ms;
-                constexpr auto sockcanpp_20NS = 20ns;
+                static constexpr auto sockcanpp_20US = 20us;
+                static constexpr auto sockcanpp_20MS = 20ms;
+                static constexpr auto sockcanpp_20NS = 20ns;
             #else // C++11
                 #define sockcanpp_3KUS std::chrono::microseconds(3000)
                 #define sockcanpp_3KMS std::chrono::milliseconds(3000)
