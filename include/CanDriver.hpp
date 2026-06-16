@@ -151,9 +151,9 @@ namespace sockcanpp {
             virtual queue<CanFdMessage> readQueuedCanFdMessages(); //!< Attempts to read all queued CAN FD messages from the bus
 
         public: // +++ Socket Management +++
-            virtual void                allowCanFdFrames(const bool enabled = true) const; //!< Sets the CAN FD frame option for the interface
+            virtual void                allowCanFdFrames(const bool enabled = true); //!< Sets the CAN FD frame option for the interface
             #ifdef CANXL_XLF
-            virtual void                allowCanXlFrames(const bool enabled = true) const; //!< Sets the CAN XL frame option for the interface
+            virtual void                allowCanXlFrames(const bool enabled = true); //!< Sets the CAN XL frame option for the interface
             #endif // CANXL_XLF
             virtual void                joinCanFilters() const; //!< Configures the socket to join the CAN filters
             virtual void                setCanFilterMask(const int32_t mask, const CanId& filterId); //!< Attempts to set a new CAN filter mask to the interface

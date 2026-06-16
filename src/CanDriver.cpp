@@ -519,7 +519,7 @@ namespace sockcanpp {
      * 
      * @param enabled Whether or not to enable the CAN FD frame option.
      */
-    void CanDriver::allowCanFdFrames(const bool enabled/* = true*/) const {
+    void CanDriver::allowCanFdFrames(const bool enabled/* = true*/) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t canFdFrames = enabled ? 1 : 0;
@@ -539,7 +539,7 @@ namespace sockcanpp {
      * 
      * @param enabled Whether or not to enable the CAN XL option.
      */
-    void CanDriver::allowCanXlFrames(const bool enabled/* = true*/) const {
+    void CanDriver::allowCanXlFrames(const bool enabled/* = true*/) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t canXlFrames = enabled ? 1 : 0;
