@@ -37,6 +37,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -101,7 +102,7 @@ namespace sockcanpp {
     bool CanDriver::waitForMessages(microseconds timeout/* = microseconds(3000)*/) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock<mutex> locky(m_lock);
+        unique_lock<mutex> locky{m_lock};
 
         fd_set readFileDescriptors;
         timeval waitTime{0, static_cast<suseconds_t>(timeout.count())};
@@ -113,7 +114,8 @@ namespace sockcanpp {
         int32_t bytesAvailable{0};
         const auto retCode = ioctl(m_socketFd, FIONREAD, &bytesAvailable);
         if (retCode == 0) {
-            m_queueSize = static_cast<int32_t>(std::ceil(bytesAvailable / sizeof(can_frame)));
+            const auto frameSize = m_canFdFramesEnabled ? sizeof(canfd_frame) : sizeof(can_frame);
+            m_queueSize = static_cast<int32_t>(std::ceil(static_cast<double>(bytesAvailable) / static_cast<double>(frameSize)));
         } else {
             m_queueSize = 0;
             // vcan interfaces don't support FIONREAD. So fall back to
@@ -152,6 +154,13 @@ namespace sockcanpp {
     CanMessage CanDriver::readMessage() { return readMessageLock(); }
 
     /**
+     * @brief Attempts to read a CAN FD message from the associated CAN bus.
+     *
+     * @return CanFdMessage The message read from the bus.
+     */
+    CanFdMessage CanDriver::readCanFdMessage() { return readCanFdMessageLock(); }
+
+    /**
      * @brief readMessage deadlock guard, attempts to read a message from the associated CAN bus.
      *
      * @return CanMessage The message read from the bus.
@@ -159,7 +168,13 @@ namespace sockcanpp {
     CanMessage CanDriver::readMessageLock(bool const lock /* = true */) {
         unique_ptr<unique_lock<mutex>> locky{nullptr};
 
-        if (lock) { locky = unique_ptr<unique_lock<mutex>>{new unique_lock<mutex>{m_lock}}; }
+        if (lock) {
+            #if __cplusplus >= 201300
+                locky = std::make_unique<unique_lock<mutex>>(m_lock);
+            #else
+                locky = unique_ptr<unique_lock<mutex>>(new unique_lock<mutex>(m_lock));
+            #endif // __cplusplus >= 201300
+        }
         
         if (0 > m_socketFd) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
         can_frame canFrame{};
@@ -180,6 +195,64 @@ namespace sockcanpp {
         }
 
         return CanMessage{canFrame};
+    }
+
+    /**
+     * @brief readCanFdMessage deadlock guard, attempts to read a CAN FD message from the associated CAN bus.
+     *
+     * @return CanFdMessage The message read from the bus.
+     */
+    CanFdMessage CanDriver::readCanFdMessageLock(bool const lock /* = true */) {
+        unique_ptr<unique_lock<mutex>> locky{nullptr};
+
+        if (lock) {
+            #if __cplusplus >= 201300
+                locky = std::make_unique<unique_lock<mutex>>(m_lock);
+            #else
+                locky = unique_ptr<unique_lock<mutex>>(new unique_lock<mutex>(m_lock));
+            #endif // __cplusplus >= 201300
+        }
+
+        if (0 > m_socketFd) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+        canfd_frame canFrame{};
+
+        const auto bytesRead = read(m_socketFd, &canFrame, sizeof(canfd_frame));
+        if (bytesRead < 0) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("FAILED to read CAN FD frame! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to read CAN FD frame! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format < 202002L
+            , m_socketFd);
+        }
+
+        if (bytesRead != CANFD_MTU && bytesRead != CAN_MTU) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("FAILED to read CAN FD frame! Expected %d or %d bytes but got %zd", CANFD_MTU, CAN_MTU, bytesRead)
+                #else
+                std::format("FAILED to read CAN FD frame! Expected {0:d} or {1:d} bytes but got {2:d}", CANFD_MTU, CAN_MTU, bytesRead)
+                #endif // __cpp_lib_format < 202002L
+            , m_socketFd);
+        }
+
+        if (bytesRead == CAN_MTU) {
+            can_frame classicFrame{};
+            std::memcpy(&classicFrame, &canFrame, sizeof(classicFrame));
+
+            if (m_collectTelemetry) {
+                return CanFdMessage{classicFrame, readFrameTimestamp()};
+            }
+
+            return CanFdMessage{classicFrame};
+        }
+
+        if (m_collectTelemetry) {
+            return CanFdMessage{canFrame, readFrameTimestamp()};
+        }
+
+        return CanFdMessage{canFrame};
     }
 
     milliseconds CanDriver::readFrameTimestamp() {
@@ -253,6 +326,48 @@ namespace sockcanpp {
     }
 
     /**
+     * @brief Attempts to send a CAN FD message on the associated bus.
+     *
+     * @param message The message to be sent.
+     * @param forceExtended Whether or not to force use of an extended ID.
+     *
+     * @return ssize_t The amount of bytes sent on the bus.
+     */
+    ssize_t CanDriver::sendCanFdMessage(const CanFdMessage& message, bool forceExtended) {
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+
+        unique_lock<mutex> locky(m_lockSend);
+
+        if (message.getPayloadLength() > CANFD_MAX_DATA_LENGTH) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("INVALID CAN FD data length! Message must be smaller than %d bytes!", CANFD_MAX_DATA_LENGTH)
+                #else
+                std::format("INVALID CAN FD data length! Message must be smaller than {0:d} bytes!", CANFD_MAX_DATA_LENGTH)
+                #endif // __cpp_lib_format < 202002L
+            , m_socketFd);
+        }
+
+        auto canFrame = message.getRawFrame();
+
+        if (forceExtended || ((uint32_t)message.getCanId() > CAN_SFF_MASK)) { canFrame.can_id |= CAN_EFF_FLAG; }
+
+        const auto bytesWritten = write(m_socketFd, &canFrame, sizeof(canFrame));
+
+        if (bytesWritten < 0) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("FAILED to write CAN FD data to socket! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to write CAN FD data to socket! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif // __cpp_lib_format < 202002L
+            , m_socketFd);
+        }
+
+        return bytesWritten;
+    }
+
+    /**
      * @brief Attempts to send a queue of messages on the associated CAN bus.
      *
      * @param messages A queue containing the messages to be sent.
@@ -301,6 +416,54 @@ namespace sockcanpp {
     }
 
     /**
+     * @brief Attempts to send a queue of CAN FD messages on the associated CAN bus.
+     *
+     * @param messages A queue containing the messages to be sent.
+     * @param delay If greater than 0, will delay the sending of the next message.
+     * @param forceExtended Whether or not to force use of an extended ID.
+     *
+     * @return int32_t The total amount of bytes sent.
+     */
+    ssize_t CanDriver::sendCanFdMessageQueue(queue<CanFdMessage>& messages, microseconds delay, bool forceExtended) { return sendCanFdMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+
+    /**
+     * @brief Attempts to send a queue of CAN FD messages on the associated CAN bus.
+     *
+     * @param messages A queue containing the messages to be sent.
+     * @param delay If greater than 0, will delay the sending of the next message.
+     * @param forceExtended Whether or not to force use of an extended ID.
+     *
+     * @return int32_t The total amount of bytes sent.
+     */
+    ssize_t CanDriver::sendCanFdMessageQueue(queue<CanFdMessage>& messages, milliseconds delay, bool forceExtended) { return sendCanFdMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay), forceExtended); }
+
+    /**
+     * @brief Attempts to send a queue of CAN FD messages on the associated CAN bus.
+     *
+     * @param messages A queue containing the messages to be sent.
+     * @param delay If greater than 0, will delay the sending of the next message.
+     * @param forceExtended Whether or not to force use of an extended ID.
+     *
+     * @return int32_t The total amount of bytes sent.
+     */
+    ssize_t CanDriver::sendCanFdMessageQueue(queue<CanFdMessage>& messages, nanoseconds delay, bool forceExtended) {
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+
+        ssize_t totalBytesWritten = 0;
+
+        while (!messages.empty()) {
+            totalBytesWritten += sendCanFdMessage(messages.front(), forceExtended);
+            messages.pop();
+
+            if (delay.count() > 0) {
+                thread::sleep_for(delay);
+            }
+        }
+
+        return totalBytesWritten;
+    }
+
+    /**
      * @brief Attempts to read all messages stored in the buffer for the associated CAN bus.
      *
      * @return queue<CanMessage> A queue containing the messages read from the bus buffer.
@@ -333,13 +496,43 @@ namespace sockcanpp {
     }
 
     /**
+     * @brief Attempts to read all CAN FD messages stored in the buffer for the associated CAN bus.
+     *
+     * @return queue<CanFdMessage> A queue containing the messages read from the bus buffer.
+     */
+    queue<CanFdMessage> CanDriver::readQueuedCanFdMessages() {
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+
+        unique_lock<mutex> locky{m_lock};
+        queue<CanFdMessage> messages{};
+
+        if (m_canReadQueueSize) {
+            for (int32_t i = m_queueSize; 0 < i; --i) {
+                messages.emplace(readCanFdMessageLock(false));
+            }
+        } else {
+            bool more{true};
+
+            do {
+                try {
+                    messages.emplace(readCanFdMessageLock(false));
+                } catch (const std::exception& e) {
+                    more = false;
+                }
+            } while (more);
+        }
+
+        return messages;
+    }
+
+    /**
      * @brief Sets the CAN FD frame option for the interface.
      * 
      * This option allows the current driver instance to receive CAN FD frames.
      * 
      * @param enabled Whether or not to enable the CAN FD frame option.
      */
-    void CanDriver::allowCanFdFrames(const bool enabled/* = true*/) const {
+    void CanDriver::allowCanFdFrames(const bool enabled/* = true*/) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t canFdFrames = enabled ? 1 : 0;
@@ -347,6 +540,8 @@ namespace sockcanpp {
         if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canFdFrames, sizeof(canFdFrames)) == -1) {
             throw CanInitException(formatString("FAILED to set CAN FD frames on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
+
+        m_canFdFramesEnabled = enabled;
     }
 
     #ifdef CANXL_XLF
@@ -357,12 +552,12 @@ namespace sockcanpp {
      * 
      * @param enabled Whether or not to enable the CAN XL option.
      */
-    void CanDriver::allowCanXlFrames(const bool enabled/* = true*/) const {
+    void CanDriver::allowCanXlFrames(const bool enabled/* = true*/) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
         int32_t canXlFrames = enabled ? 1 : 0;
 
-        
+        unique_lock<mutex> locky{m_lock};
         if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canXlFrames, sizeof(canXlFrames)) == -1) {
             throw CanInitException(formatString("FAILED to set CAN XL frames on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
@@ -401,7 +596,7 @@ namespace sockcanpp {
     void CanDriver::setCanFilters(const filtermap_t& filters) {
         if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
 
-        unique_lock<mutex> locky(m_lock);
+        unique_lock<mutex> locky{m_lock};
         vector<can_filter> canFilters{};
 
         // Structured bindings only available with C++17

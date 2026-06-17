@@ -41,6 +41,7 @@
 //      LOCAL  INCLUDES     //
 //////////////////////////////
 #include "CanId.hpp"
+#include "CanFdMessage.hpp"
 #include "CanMessage.hpp"
 
 #if __cplusplus < 201703L
@@ -85,9 +86,10 @@ namespace sockcanpp {
      */
     class CanDriver {
         public: // +++ Static +++
-            static constexpr int32_t CAN_MAX_DATA_LENGTH = 8; //!< The maximum amount of bytes allowed in a single CAN frame
-            static constexpr int32_t CAN_SOCK_RAW        = CAN_RAW; //!< The raw CAN protocol
-            static constexpr int32_t CAN_SOCK_SEVEN      = 7; //!< A separate CAN protocol, used by certain embedded device OEMs.
+            static constexpr int32_t CAN_MAX_DATA_LENGTH    = 8; //!< The maximum amount of bytes allowed in a single CAN frame
+            static constexpr int32_t CANFD_MAX_DATA_LENGTH  = CANFD_MAX_DLEN; //!< The maximum amount of bytes allowed in a single CAN FD frame
+            static constexpr int32_t CAN_SOCK_RAW           = CAN_RAW; //!< The raw CAN protocol
+            static constexpr int32_t CAN_SOCK_SEVEN         = 7; //!< A separate CAN protocol, used by certain embedded device OEMs.
 
         public: // +++ Constructor / Destructor +++
             CanDriver(const string& canInterface, const int32_t canProtocol, const CanId defaultSenderId = 0); //!< Constructor
@@ -112,13 +114,13 @@ namespace sockcanpp {
 
         public: // +++ I/O +++
             #if __cplusplus >= 201300
-                #define sockcanpp_3KUS 3000us
-                #define sockcanpp_3KMS 3000ms
-                #define sockcanpp_3KNS 3000ns
+                static constexpr auto sockcanpp_3KUS = 3000us;
+                static constexpr auto sockcanpp_3KMS = 3000ms;
+                static constexpr auto sockcanpp_3KNS = 3000ns;
 
-                #define sockcanpp_20US 20us
-                #define sockcanpp_20MS 20ms
-                #define sockcanpp_20NS 20ns
+                static constexpr auto sockcanpp_20US = 20us;
+                static constexpr auto sockcanpp_20MS = 20ms;
+                static constexpr auto sockcanpp_20NS = 20ns;
             #else // C++11
                 #define sockcanpp_3KUS std::chrono::microseconds(3000)
                 #define sockcanpp_3KMS std::chrono::milliseconds(3000)
@@ -134,18 +136,24 @@ namespace sockcanpp {
             virtual bool                waitForMessages(nanoseconds timeout = sockcanpp_3KNS); //!< Waits for CAN messages to appear
 
             virtual CanMessage          readMessage(); //!< Attempts to read a single message from the bus
+            virtual CanFdMessage        readCanFdMessage(); //!< Attempts to read a single CAN FD message from the bus
 
             virtual ssize_t             sendMessage(const CanMessage& message, bool forceExtended = false); //!< Attempts to send a single CAN message
+            virtual ssize_t             sendCanFdMessage(const CanFdMessage& message, bool forceExtended = false); //!< Attempts to send a single CAN FD message
             virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, microseconds delay, bool forceExtended = false); //!< Attempts to send a queue of messages
             virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, milliseconds delay = sockcanpp_20MS, bool forceExtended = false); //!< Attempts to send a queue of messages
             virtual ssize_t             sendMessageQueue(queue<CanMessage>& messages, nanoseconds delay, bool forceExtended = false); //!< Attempts to send a queue of messages
+            virtual ssize_t             sendCanFdMessageQueue(queue<CanFdMessage>& messages, microseconds delay, bool forceExtended = false); //!< Attempts to send a queue of CAN FD messages
+            virtual ssize_t             sendCanFdMessageQueue(queue<CanFdMessage>& messages, milliseconds delay = sockcanpp_20MS, bool forceExtended = false); //!< Attempts to send a queue of CAN FD messages
+            virtual ssize_t             sendCanFdMessageQueue(queue<CanFdMessage>& messages, nanoseconds delay, bool forceExtended = false); //!< Attempts to send a queue of CAN FD messages
 
             virtual queue<CanMessage>   readQueuedMessages(); //!< Attempts to read all queued messages from the bus
+            virtual queue<CanFdMessage> readQueuedCanFdMessages(); //!< Attempts to read all queued CAN FD messages from the bus
 
         public: // +++ Socket Management +++
-            virtual void                allowCanFdFrames(const bool enabled = true) const; //!< Sets the CAN FD frame option for the interface
+            virtual void                allowCanFdFrames(const bool enabled = true); //!< Sets the CAN FD frame option for the interface
             #ifdef CANXL_XLF
-            virtual void                allowCanXlFrames(const bool enabled = true) const; //!< Sets the CAN XL frame option for the interface
+            virtual void                allowCanXlFrames(const bool enabled = true); //!< Sets the CAN XL frame option for the interface
             #endif // CANXL_XLF
             virtual void                joinCanFilters() const; //!< Configures the socket to join the CAN filters
             virtual void                setCanFilterMask(const int32_t mask, const CanId& filterId); //!< Attempts to set a new CAN filter mask to the interface
@@ -162,12 +170,14 @@ namespace sockcanpp {
 
         private: // +++ Member Functions +++
             virtual CanMessage          readMessageLock(bool const lock = true); //!< readMessage deadlock guard
+            virtual CanFdMessage        readCanFdMessageLock(bool const lock = true); //!< readCanFdMessage deadlock guard
             virtual milliseconds        readFrameTimestamp();
 
         private: // +++ Variables +++
             atomic<size_t>          m_receivedMessages{0}; //!< The number of received messages
 
             bool                    m_canReadQueueSize{true}; //!< Is the queue size available
+            mutable bool            m_canFdFramesEnabled{false}; //!< Whether or not CAN FD frames are enabled on the socket
             bool                    m_collectTelemetry{false}; //!< Whether or not to collect telemetry data from the CAN bus
             bool                    m_relativeTimestamps{false}; //!< Whether or not to use relative timestamps
 

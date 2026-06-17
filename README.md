@@ -66,7 +66,7 @@ CPMAddPackage(
 
 ## First Steps
 
-In its current state, libsockcanpp doesn't support CANFD; very basic support exists for CANXL, although it is highly experimental and unstable.
+libsockcanpp includes initial CAN FD support via `CanFdMessage` and explicit CAN FD send/receive APIs; very basic support exists for CANXL, although it is highly experimental and unstable.
 
 This library provides a basic and straightforward API.
 The main class is `CanDriver`; it is multi-instance and thread-safe.
@@ -83,6 +83,7 @@ The main class is `CanDriver`; it is multi-instance and thread-safe.
 #include <CanDriver.hpp>
 
 using sockcanpp::CanDriver;
+using sockcanpp::CanFdMessage;
 using sockcanpp::CanMessage;
 using sockcanpp::exceptions::CanException;
 
@@ -120,6 +121,17 @@ void sendCanFrame(CanDriver& driver) {
 }
 ```
 
+### Sending a single CAN FD frame
+
+```cpp
+void sendCanFdFrame(CanDriver& driver) {
+    driver.allowCanFdFrames();
+
+    CanFdMessage msg{0x123, std::string(64, '\x01'), CANFD_BRS};
+    driver.sendCanFdMessage(msg);
+}
+```
+
 ### Sending multiple CAN frames
 
 ```cpp
@@ -149,6 +161,18 @@ void receiveFrame(CanDriver& driver) {
     if (receivedMsg.isErrorFrame()) {
         handleErrorFrame(receivedMsg);
     }
+}
+```
+
+### Receiving a CAN FD frame
+
+```cpp
+void receiveCanFdFrame(CanDriver& driver) {
+    driver.allowCanFdFrames();
+
+    if (!driver.waitForMessages()) { return; }
+
+    const auto receivedMsg = driver.readCanFdMessage();
 }
 ```
 

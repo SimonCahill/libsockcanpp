@@ -1,0 +1,38 @@
+{
+  "name": "libsockcanpp Alpine",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "privileged": true,
+  "runArgs": [
+    "--network=host",
+    "--cap-add=NET_ADMIN"
+  ],
+  "containerEnv": {
+    "SHELL": "/bin/zsh"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "cmake.configureOnOpen": true,
+        "cmake.generator": "Ninja",
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/bin/zsh"
+          }
+        }
+      },
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake",
+        "ms-vscode.cpptools-extension-pack"
+      ]
+    }
+  },
+  "postAttachCommand": "zsh",
+  "features": {}
+}
