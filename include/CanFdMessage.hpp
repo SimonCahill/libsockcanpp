@@ -65,10 +65,12 @@ namespace sockcanpp {
         public: // +++ Constructor / Destructor +++
                                 CanFdMessageT() = default; //!< Default constructor, initializes an empty CAN FD message.
 
-            explicit            CanFdMessageT(const struct canfd_frame& frame): m_canIdentifier(frame.can_id), m_rawFrame(frame) { } //!< Constructs a CAN FD message from a raw canfd_frame structure.
-            explicit            CanFdMessageT(const struct canfd_frame& frame, const Duration& timestampOffset): m_canIdentifier(frame.can_id), m_timestampOffset(timestampOffset), m_rawFrame(frame) { } //!< Constructs a CAN FD message from a raw canfd_frame structure with a timestamp offset.
+            explicit            CanFdMessageT(const struct canfd_frame& frame): m_canIdentifier(frame.can_id), m_rawFrame(validateRawFrame(frame)) { } //!< Constructs a CAN FD message from a raw canfd_frame structure.
+            explicit            CanFdMessageT(const struct canfd_frame& frame, const Duration& timestampOffset): m_canIdentifier(frame.can_id), m_timestampOffset(timestampOffset), m_rawFrame(validateRawFrame(frame)) { } //!< Constructs a CAN FD message from a raw canfd_frame structure with a timestamp offset.
 
             explicit            CanFdMessageT(const struct can_frame& frame): m_canIdentifier(frame.can_id) {
+                validateRawFrame(frame);
+
                 m_rawFrame.can_id = frame.can_id;
                 m_rawFrame.len = frame.can_dlc;
                 std::copy(std::begin(frame.data), std::begin(frame.data) + frame.can_dlc, m_rawFrame.data);
@@ -157,6 +159,22 @@ namespace sockcanpp {
             } //!< Compares this CAN FD message to another for inequality.
 
         private:
+            static const can_frame& validateRawFrame(const can_frame& frame) {
+                if (frame.can_dlc > CAN_MAX_DLEN) {
+                    throw system_error(std::make_error_code(std::errc::message_size), "CAN payload too big!");
+                }
+
+                return frame;
+            }
+
+            static const canfd_frame& validateRawFrame(const canfd_frame& frame) {
+                if (frame.len > CANFD_MAX_DLEN) {
+                    throw system_error(std::make_error_code(std::errc::message_size), "CAN FD payload too big!");
+                }
+
+                return frame;
+            }
+
             CanId               m_canIdentifier{};
 
             Duration            m_timestampOffset{};
