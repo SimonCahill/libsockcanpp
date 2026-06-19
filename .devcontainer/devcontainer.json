@@ -8,7 +8,8 @@
   "privileged": true,
   "runArgs": [
     "--network=host",
-    "--cap-add=NET_ADMIN"
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
   ],
   "containerEnv": {
     "SHELL": "/bin/zsh"
@@ -18,6 +19,10 @@
       "settings": {
         "cmake.configureOnOpen": true,
         "cmake.generator": "Ninja",
+        "cmake.configureSettings": {
+          "CMAKE_C_COMPILER": "/usr/bin/clang",
+          "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+        },
         "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
           "zsh": {

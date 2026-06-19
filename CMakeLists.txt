@@ -4,6 +4,7 @@ project(sockcanpp LANGUAGES CXX VERSION 1.8.0 DESCRIPTION "A simple C++ wrapper 
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
 option(BUILD_TESTS "Build the tests" OFF)
+option(BUILD_FUZZ_TESTS "Build fuzz targets for security-sensitive parsers" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

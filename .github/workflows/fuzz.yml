@@ -1,0 +1,56 @@
+name: Daily Fuzz
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Debug
+  FUZZ_TIME_SECONDS: 300
+
+jobs:
+  message-fuzzer:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install clang cmake libgtest-dev ninja-build
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: |
+        cmake -S "${{ github.workspace }}" -B "${{ github.workspace }}/build" \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE="${{ env.BUILD_TYPE }}" \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DBUILD_TESTS=ON \
+          -DBUILD_FUZZ_TESTS=ON
+
+    - name: Build fuzzer
+      run: cmake --build "${{ github.workspace }}/build" --target sockcanpp_message_fuzzer
+
+    - name: Run message fuzzer
+      timeout-minutes: 10
+      run: |
+        mkdir -p "${{ github.workspace }}/fuzz-artifacts"
+        "${{ github.workspace }}/build/test/fuzz/sockcanpp_message_fuzzer" \
+          -max_total_time="${{ env.FUZZ_TIME_SECONDS }}" \
+          -max_len=72 \
+          -artifact_prefix="${{ github.workspace }}/fuzz-artifacts/"
+
+    - name: Upload fuzz artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: message-fuzzer-artifacts
+        path: fuzz-artifacts/
+        if-no-files-found: ignore
+        retention-days: 14

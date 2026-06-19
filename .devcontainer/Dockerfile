@@ -13,17 +13,23 @@ RUN apk add --no-cache \
         build-base \
         ca-certificates \
         can-utils \
+        clang \
         cmake \
+        compiler-rt \
         cppcheck \
         curl \
         doxygen \
         gdb \
         git \
+        gcovr \
         gtest-dev \
         graphviz \
         iproute2 \
         kmod \
+        lcov \
+        lld \
         linux-headers \
+        llvm \
         make \
         nano \
         ninja \
