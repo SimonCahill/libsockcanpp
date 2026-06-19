@@ -681,6 +681,16 @@ namespace sockcanpp {
         struct ifreq ifaceRequest{};
         int64_t fdOptions{0};
 
+        if (m_canInterface.size() >= IFNAMSIZ) {
+            throw CanInitException(
+                #if __cpp_lib_format < 202002L
+                formatString("INVALID CAN interface name %s! Must be shorter than %d bytes", m_canInterface.c_str(), IFNAMSIZ)
+                #else
+                std::format("INVALID CAN interface name {0:s}! Must be shorter than {1:d} bytes", m_canInterface, IFNAMSIZ)
+                #endif // __cpp_lib_format < 202002L
+            );
+        }
+
         m_socketFd = socket(PF_CAN, SOCK_RAW, m_canProtocol);
 
         if (m_socketFd == -1) {
