@@ -82,8 +82,8 @@ namespace sockcanpp {
         public: // +++ Constructor / Destructor +++
                                 CanMessageT() = default; //!< Default constructor, initializes an empty CAN message.
 
-            explicit            CanMessageT(const struct can_frame& frame): m_canIdentifier(frame.can_id), m_rawFrame(frame) { } //!< Constructs a CAN message from a raw can_frame structure.
-            explicit            CanMessageT(const struct can_frame& frame, const Duration& timestampOffset): m_canIdentifier(frame.can_id), m_timestampOffset(timestampOffset), m_rawFrame(frame) { } //!< Constructs a CAN message from a raw can_frame structure with a timestamp offset.
+            explicit            CanMessageT(const struct can_frame& frame): m_canIdentifier(frame.can_id), m_rawFrame(validateRawFrame(frame)) { } //!< Constructs a CAN message from a raw can_frame structure.
+            explicit            CanMessageT(const struct can_frame& frame, const Duration& timestampOffset): m_canIdentifier(frame.can_id), m_timestampOffset(timestampOffset), m_rawFrame(validateRawFrame(frame)) { } //!< Constructs a CAN message from a raw can_frame structure with a timestamp offset.
 
             /**
              * @brief Constructs a CAN message from a CAN ID and a frame data string.
@@ -201,6 +201,14 @@ namespace sockcanpp {
             } //!< Compares this CAN message to another for inequality.
 
         private:
+            static const can_frame& validateRawFrame(const can_frame& frame) {
+                if (frame.can_dlc > CAN_MAX_DLEN) {
+                    throw system_error(std::make_error_code(std::errc::message_size), "CAN payload too big!");
+                }
+
+                return frame;
+            }
+
             CanId               m_canIdentifier{};
 
             Duration            m_timestampOffset{};
