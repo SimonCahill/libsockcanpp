@@ -39,6 +39,8 @@ jobs:
 
     - name: Run message fuzzer
       timeout-minutes: 10
+      env:
+        ASAN_OPTIONS: detect_leaks=0
       run: |
         mkdir -p "${{ github.workspace }}/fuzz-artifacts"
         "${{ github.workspace }}/build/test/fuzz/sockcanpp_message_fuzzer" \

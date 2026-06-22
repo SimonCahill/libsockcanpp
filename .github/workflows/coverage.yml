@@ -1,0 +1,48 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install cmake gcovr libgtest-dev ninja-build
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: |
+        cmake -S "${{ github.workspace }}" -B "${{ github.workspace }}/build-coverage" \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE="${{ env.BUILD_TYPE }}" \
+          -DBUILD_TESTS=ON \
+          -DBUILD_COVERAGE=ON
+
+    - name: Build
+      run: cmake --build "${{ github.workspace }}/build-coverage"
+
+    - name: Report total coverage
+      run: |
+        cmake --build "${{ github.workspace }}/build-coverage" --target coverage | tee coverage.log
+        {
+          echo "## Coverage"
+          grep '^lines:' coverage.log
+          grep '^functions:' coverage.log
+          grep '^branches:' coverage.log
+        } >> "${GITHUB_STEP_SUMMARY}"

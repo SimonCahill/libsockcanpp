@@ -5,6 +5,7 @@ project(sockcanpp LANGUAGES CXX VERSION 1.8.0 DESCRIPTION "A simple C++ wrapper 
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
 option(BUILD_TESTS "Build the tests" OFF)
 option(BUILD_FUZZ_TESTS "Build fuzz targets for security-sensitive parsers" OFF)
+option(BUILD_COVERAGE "Build tests with coverage instrumentation" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -27,6 +28,19 @@ add_compile_options(
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
+if (BUILD_COVERAGE)
+    if (NOT BUILD_TESTS)
+        message(FATAL_ERROR "BUILD_COVERAGE requires BUILD_TESTS=ON")
+    endif()
+
+    if (NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        message(FATAL_ERROR "BUILD_COVERAGE requires GCC or Clang")
+    endif()
+
+    add_compile_options(-O0 -g --coverage)
+    add_link_options(--coverage)
+endif()
+
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
     add_link_options($<$<CONFIG:RELEASE>:-s>)
 endif()
@@ -48,6 +62,30 @@ if(BUILD_TESTS STREQUAL "ON")
     enable_testing()
     add_library(${PROJECT_NAME}_test STATIC)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
+
+    if (BUILD_COVERAGE)
+        find_program(GCOVR_EXECUTABLE gcovr REQUIRED)
+        add_custom_target(coverage
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/CMakeFiles/${PROJECT_NAME}.dir
+            COMMAND find ${CMAKE_BINARY_DIR}/CMakeFiles/${PROJECT_NAME}.dir -name "*.gcda" -delete
+            COMMAND find ${CMAKE_BINARY_DIR}/CMakeFiles/${PROJECT_NAME}.dir -name "*.gcno" -delete
+            COMMAND ${CMAKE_CTEST_COMMAND} --test-dir ${CMAKE_BINARY_DIR} --output-on-failure
+            COMMAND ${GCOVR_EXECUTABLE}
+                ${CMAKE_BINARY_DIR}
+                --root ${CMAKE_SOURCE_DIR}
+                --object-directory ${CMAKE_BINARY_DIR}
+                --gcov-exclude ${CMAKE_BINARY_DIR}/CMakeFiles/${PROJECT_NAME}\\.dir/
+                --filter ${CMAKE_SOURCE_DIR}/include
+                --filter ${CMAKE_SOURCE_DIR}/src
+                --exclude ${CMAKE_SOURCE_DIR}/test
+                --exclude ${CMAKE_BINARY_DIR}
+                --txt
+                --print-summary
+            DEPENDS libsockcanpp_unittests
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            COMMENT "Run tests and print total coverage percentage"
+        )
+    endif()
 endif()
 
 add_subdirectory(include)
