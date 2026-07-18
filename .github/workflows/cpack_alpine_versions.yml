@@ -1,0 +1,67 @@
+name: Build and Pack (Alpine Versions)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-and-pack:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Alpine 3.24
+            image: alpine:3.24
+            version: "3.24"
+          - name: Alpine 3.23
+            image: alpine:3.23
+            version: "3.23"
+          - name: Alpine 3.22
+            image: alpine:3.22
+            version: "3.22"
+
+    steps:
+    - name: Prepare environment
+      shell: sh
+      run: |
+        set -eu
+        apk update
+        apk upgrade --no-cache
+        apk add --no-cache \
+          bash \
+          gcompat \
+          build-base \
+          cmake \
+          git \
+          pkgconf \
+          can-utils \
+          linux-headers \
+          coreutils \
+          dpkg \
+          findutils \
+          grep \
+          rpm \
+          zip
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        cd ${{github.workspace}}/build
+        cpack .
