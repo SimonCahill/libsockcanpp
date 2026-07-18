@@ -6,7 +6,7 @@ set(TARGET_NAME testsockcanpp.bin)
 set(CMAKE_CXX_STANDARD 14)
 
 include_directories(
-    include/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../include
 )
 
 if (NOT TARGET sockcanpp)

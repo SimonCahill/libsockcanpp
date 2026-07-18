@@ -47,13 +47,16 @@
 //////////////////////////////
 //      LOCAL  INCLUDES     //
 //////////////////////////////
-#include "CanDriver.hpp"
-#include "CanId.hpp"
-#include "CanMessage.hpp"
-#include "exceptions/CanCloseException.hpp"
-#include "exceptions/CanException.hpp"
-#include "exceptions/CanInitException.hpp"
-#include "exceptions/InvalidSocketException.hpp"
+#include "sockcanpp/CanDriver.hpp"
+#include "sockcanpp/CanId.hpp"
+#include "sockcanpp/CanMessage.hpp"
+#ifdef SOCKCANPP_CANXL_SUPPORT
+#include "sockcanpp/CanXlMessage.hpp"
+#endif
+#include "sockcanpp/exceptions/CanCloseException.hpp"
+#include "sockcanpp/exceptions/CanException.hpp"
+#include "sockcanpp/exceptions/CanInitException.hpp"
+#include "sockcanpp/exceptions/InvalidSocketException.hpp"
 
 namespace sockcanpp {
 
@@ -114,8 +117,18 @@ namespace sockcanpp {
         int32_t bytesAvailable{0};
         const auto retCode = ioctl(m_socketFd, FIONREAD, &bytesAvailable);
         if (retCode == 0) {
-            const auto frameSize = m_canFdFramesEnabled ? sizeof(canfd_frame) : sizeof(can_frame);
-            m_queueSize = static_cast<int32_t>(std::ceil(static_cast<double>(bytesAvailable) / static_cast<double>(frameSize)));
+            #ifdef SOCKCANPP_CANXL_SUPPORT
+            if (m_canXlFramesEnabled) {
+                // CAN XL frames have a variable transfer size. The non-blocking
+                // queue readers therefore consume frames until EAGAIN.
+                m_queueSize = 0;
+                m_canReadQueueSize = false;
+            } else
+            #endif
+            {
+                const auto frameSize = m_canFdFramesEnabled ? sizeof(canfd_frame) : sizeof(can_frame);
+                m_queueSize = static_cast<int32_t>(std::ceil(static_cast<double>(bytesAvailable) / static_cast<double>(frameSize)));
+            }
         } else {
             m_queueSize = 0;
             // vcan interfaces don't support FIONREAD. So fall back to
@@ -159,6 +172,13 @@ namespace sockcanpp {
      * @return CanFdMessage The message read from the bus.
      */
     CanFdMessage CanDriver::readCanFdMessage() { return readCanFdMessageLock(); }
+
+    #ifdef SOCKCANPP_CANXL_SUPPORT
+    /**
+     * @brief Attempts to read a CAN XL message from the associated CAN bus.
+     */
+    CanXlMessage CanDriver::readCanXlMessage() { return readCanXlMessageLock(); }
+    #endif
 
     /**
      * @brief readMessage deadlock guard, attempts to read a message from the associated CAN bus.
@@ -254,6 +274,54 @@ namespace sockcanpp {
 
         return CanFdMessage{canFrame};
     }
+
+    #ifdef SOCKCANPP_CANXL_SUPPORT
+    CanXlMessage CanDriver::readCanXlMessageLock(bool const lock /* = true */) {
+        unique_ptr<unique_lock<mutex>> locky{nullptr};
+
+        if (lock) {
+            #if __cplusplus >= 201300
+                locky = std::make_unique<unique_lock<mutex>>(m_lock);
+            #else
+                locky = unique_ptr<unique_lock<mutex>>(new unique_lock<mutex>(m_lock));
+            #endif
+        }
+
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+
+        canxl_frame canFrame{};
+        const auto bytesRead = read(m_socketFd, &canFrame, CANXL_MTU);
+        if (bytesRead < 0) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("FAILED to read CAN XL frame! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to read CAN XL frame! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif
+            , m_socketFd);
+        }
+
+        const auto expectedSize = static_cast<ssize_t>(CANXL_HDR_SIZE + canFrame.len);
+        if (!(canFrame.flags & CANXL_XLF) ||
+            canFrame.len < CANXL_MIN_DLEN ||
+            canFrame.len > CANXL_MAX_DLEN ||
+            bytesRead != expectedSize) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("FAILED to read CAN XL frame! Invalid frame of %zd bytes", bytesRead)
+                #else
+                std::format("FAILED to read CAN XL frame! Invalid frame of {0:d} bytes", bytesRead)
+                #endif
+            , m_socketFd);
+        }
+
+        if (m_collectTelemetry) {
+            return CanXlMessage{canFrame, readFrameTimestamp()};
+        }
+
+        return CanXlMessage{canFrame};
+    }
+    #endif
 
     milliseconds CanDriver::readFrameTimestamp() {
         struct timeval tv{};
@@ -367,6 +435,37 @@ namespace sockcanpp {
         return bytesWritten;
     }
 
+    #ifdef SOCKCANPP_CANXL_SUPPORT
+    /**
+     * @brief Attempts to send a CAN XL message on the associated bus.
+     */
+    ssize_t CanDriver::sendCanXlMessage(const CanXlMessage& message) {
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+
+        unique_lock<mutex> locky(m_lockSend);
+
+        if (message.getPayloadLength() < CANXL_MIN_DLEN || message.getPayloadLength() > CANXL_MAX_DATA_LENGTH) {
+            throw CanException("INVALID CAN XL data length! Message must contain 1 to 2048 bytes!", m_socketFd);
+        }
+
+        const auto& canFrame = message.getRawFrame();
+        const auto frameSize = static_cast<size_t>(CANXL_HDR_SIZE + canFrame.len);
+        const auto bytesWritten = write(m_socketFd, &canFrame, frameSize);
+
+        if (bytesWritten < 0) {
+            throw CanException(
+                #if __cpp_lib_format < 202002L
+                formatString("FAILED to write CAN XL data to socket! Error: %d => %s", errno, strerror(errno))
+                #else
+                std::format("FAILED to write CAN XL data to socket! Error: {0:d} => {1:s}", errno, strerror(errno))
+                #endif
+            , m_socketFd);
+        }
+
+        return bytesWritten;
+    }
+    #endif
+
     /**
      * @brief Attempts to send a queue of messages on the associated CAN bus.
      *
@@ -463,6 +562,32 @@ namespace sockcanpp {
         return totalBytesWritten;
     }
 
+    #ifdef SOCKCANPP_CANXL_SUPPORT
+    ssize_t CanDriver::sendCanXlMessageQueue(queue<CanXlMessage>& messages, microseconds delay) {
+        return sendCanXlMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay));
+    }
+
+    ssize_t CanDriver::sendCanXlMessageQueue(queue<CanXlMessage>& messages, milliseconds delay) {
+        return sendCanXlMessageQueue(messages, std::chrono::duration_cast<nanoseconds>(delay));
+    }
+
+    ssize_t CanDriver::sendCanXlMessageQueue(queue<CanXlMessage>& messages, nanoseconds delay) {
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+
+        ssize_t totalBytesWritten = 0;
+        while (!messages.empty()) {
+            totalBytesWritten += sendCanXlMessage(messages.front());
+            messages.pop();
+
+            if (delay.count() > 0) {
+                thread::sleep_for(delay);
+            }
+        }
+
+        return totalBytesWritten;
+    }
+    #endif
+
     /**
      * @brief Attempts to read all messages stored in the buffer for the associated CAN bus.
      *
@@ -525,6 +650,26 @@ namespace sockcanpp {
         return messages;
     }
 
+    #ifdef SOCKCANPP_CANXL_SUPPORT
+    queue<CanXlMessage> CanDriver::readQueuedCanXlMessages() {
+        if (m_socketFd < 0) { throw InvalidSocketException("Invalid socket!", m_socketFd); }
+
+        unique_lock<mutex> locky{m_lock};
+        queue<CanXlMessage> messages{};
+        bool more{true};
+
+        do {
+            try {
+                messages.emplace(readCanXlMessageLock(false));
+            } catch (const std::exception&) {
+                more = false;
+            }
+        } while (more);
+
+        return messages;
+    }
+    #endif
+
     /**
      * @brief Sets the CAN FD frame option for the interface.
      * 
@@ -544,7 +689,7 @@ namespace sockcanpp {
         m_canFdFramesEnabled = enabled;
     }
 
-    #ifdef CANXL_XLF
+    #ifdef SOCKCANPP_CANXL_SUPPORT
     /**
      * @brief Sets the CAN XL option for the interface.
      * 
@@ -561,8 +706,10 @@ namespace sockcanpp {
         if (setsockopt(m_socketFd, SOL_CAN_RAW, CAN_RAW_XL_FRAMES, &canXlFrames, sizeof(canXlFrames)) == -1) {
             throw CanInitException(formatString("FAILED to set CAN XL frames on socket %d! Error: %d => %s", m_socketFd, errno, strerror(errno)));
         }
+
+        m_canXlFramesEnabled = enabled;
     }
-    #endif // CANXL_XLF
+    #endif
 
     /**
      * @brief Configures the socket to join the CAN filters.

@@ -10,8 +10,8 @@
 
 #include <gtest/gtest.h>
 
-#include <CanFdMessage.hpp>
-#include <CanDriver.hpp>
+#include <sockcanpp/CanFdMessage.hpp>
+#include <sockcanpp/CanDriver.hpp>
 
 #include <linux/can.h>
 
