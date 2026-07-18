@@ -1,13 +1,32 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(sockcanpp LANGUAGES CXX VERSION 1.8.0 DESCRIPTION "A simple C++ wrapper for the Linux SocketCAN API" HOMEPAGE_URL "https://github.com/simoncahill/libsockcanpp")
+project(sockcanpp LANGUAGES CXX VERSION 1.9.0 DESCRIPTION "A simple C++ wrapper for the Linux SocketCAN API" HOMEPAGE_URL "https://github.com/simoncahill/libsockcanpp")
 
 option(BUILD_SHARED_LIBS "Build shared libraries (.so) instead of static ones (.a)" ON)
 option(BUILD_TESTS "Build the tests" OFF)
+option(sockcanpp_CANXL_SUPPORT "Enable CAN XL message and driver APIs" OFF)
+option(sockcanpp_NO_INCL_DIR "Expose headers without the sockcanpp/ include prefix" OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(sockcanpp_CONCEPT_SUPPORT "Allow higher level language support" ON)
+
+if (sockcanpp_CANXL_SUPPORT)
+    include(CheckCXXSourceCompiles)
+    check_cxx_source_compiles([=[
+        #include <linux/can.h>
+        #include <linux/can/raw.h>
+        int main() {
+            canxl_frame frame{};
+            frame.flags = CANXL_XLF;
+            return CAN_RAW_XL_FRAMES + static_cast<int>(CANXL_MTU);
+        }
+    ]=] sockcanpp_HAS_CANXL_KERNEL_HEADERS)
+
+    if (NOT sockcanpp_HAS_CANXL_KERNEL_HEADERS)
+        message(FATAL_ERROR "sockcanpp_CANXL_SUPPORT requires Linux kernel headers with CAN XL support")
+    endif()
+endif()
 
 if (sockcanpp_CONCEPT_SUPPORT)
     message(STATUS "Enabling support for higher level language features")
@@ -47,6 +66,18 @@ if(BUILD_TESTS STREQUAL "ON")
     enable_testing()
     add_library(${PROJECT_NAME}_test STATIC)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
+endif()
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+if (sockcanpp_CANXL_SUPPORT)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SOCKCANPP_CANXL_SUPPORT=1)
+endif()
+
+if (TARGET ${PROJECT_NAME}_test)
+    target_include_directories(${PROJECT_NAME}_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if (sockcanpp_CANXL_SUPPORT)
+        target_compile_definitions(${PROJECT_NAME}_test PUBLIC SOCKCANPP_CANXL_SUPPORT=1)
+    endif()
 endif()
 
 add_subdirectory(include)

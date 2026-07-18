@@ -118,7 +118,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = README.md include/ include/exceptions/ src/ test/
+INPUT                  = README.md include/sockcanpp/ include/sockcanpp/exceptions/ include/sockcanpp/can_errors/ src/ test/
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.c \
                          *.cc \

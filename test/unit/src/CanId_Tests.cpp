@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include <CanId.hpp>
+#include <sockcanpp/CanId.hpp>
 
 using sockcanpp::CanId;
 

@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include <CanMessage.hpp>
+#include <sockcanpp/CanMessage.hpp>
 
 #include <array>
 

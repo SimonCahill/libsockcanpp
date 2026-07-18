@@ -25,10 +25,10 @@
 #include <iostream>
 #include <string>
 
-#include <CanDriver.hpp>
-#include <exceptions/CanException.hpp>
-#include <exceptions/CanInitException.hpp>
-#include <exceptions/InvalidSocketException.hpp>
+#include <sockcanpp/CanDriver.hpp>
+#include <sockcanpp/exceptions/CanException.hpp>
+#include <sockcanpp/exceptions/CanInitException.hpp>
+#include <sockcanpp/exceptions/InvalidSocketException.hpp>
 
 using namespace std::chrono_literals;
 

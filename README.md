@@ -13,12 +13,27 @@ libsockcanpp is a socketcan wrapper library for C++, aimed to be easy to use wit
 
 ## Building
 
+> [!WARNING]
+> The default public include layout now places headers below a `sockcanpp/`
+> directory. Existing source such as `#include <CanDriver.hpp>` must change to
+> `#include <sockcanpp/CanDriver.hpp>`. To retain the legacy flat include layout,
+> configure with `-Dsockcanpp_NO_INCL_DIR=ON`. The namespaced layout is enabled
+> by default; the compatibility option restores the old behavior per build.
+
 > [!NOTE]
 > **C++11** SUPPORT:  
 > This library supports modern C++ features, such as concepts in certain places.
 > If your project cannot support C++20 features, you can force the C++ standard back by setting  
 > `-Dsockcanpp_CONCEPT_SUPPORT=OFF` in the command-line or `set(sockcanpp_CONCEPT_SUPPORT OFF CACHE BOOL "Force C++ standard back to 11")`  
 > in your CMakeLists.txt.
+
+CAN XL support is opt-in and requires CAN XL definitions in the installed Linux
+kernel headers. Enable it with `-Dsockcanpp_CANXL_SUPPORT=ON` or set the cache
+option before adding this project:
+
+```cmake
+set(sockcanpp_CANXL_SUPPORT ON CACHE BOOL "Enable CAN XL support")
+```
 
 libsockcanpp was designed with use in CMake projects, but it can also easily be integrated into existing Makefile projects, as long as cmake is present on the build system.
 
@@ -66,7 +81,8 @@ CPMAddPackage(
 
 ## First Steps
 
-libsockcanpp includes initial CAN FD support via `CanFdMessage` and explicit CAN FD send/receive APIs; very basic support exists for CANXL, although it is highly experimental and unstable.
+libsockcanpp supports classic CAN and CAN FD. CAN XL message and driver APIs are
+available when the library is built with `sockcanpp_CANXL_SUPPORT=ON`.
 
 This library provides a basic and straightforward API.
 The main class is `CanDriver`; it is multi-instance and thread-safe.
@@ -80,11 +96,14 @@ The main class is `CanDriver`; it is multi-instance and thread-safe.
 > `$ sudo ip link set dev van0 up type vcan`
 
 ```cpp
-#include <CanDriver.hpp>
+#include <sockcanpp/CanDriver.hpp>
 
 using sockcanpp::CanDriver;
 using sockcanpp::CanFdMessage;
 using sockcanpp::CanMessage;
+#ifdef SOCKCANPP_CANXL_SUPPORT
+using sockcanpp::CanXlMessage;
+#endif
 using sockcanpp::exceptions::CanException;
 
 int main() {
@@ -132,6 +151,21 @@ void sendCanFdFrame(CanDriver& driver) {
 }
 ```
 
+### Sending a CAN XL frame
+
+CAN XL payloads contain 1 to 2048 bytes. The priority is an 11-bit arbitration
+priority; SDU type, acceptance field, and flags are optional constructor
+arguments. VCID is also available when provided by the installed kernel headers.
+
+```cpp
+void sendCanXlFrame(CanDriver& driver) {
+    driver.allowCanXlFrames();
+
+    CanXlMessage msg{0x123, std::string(128, '\x01')};
+    driver.sendCanXlMessage(msg);
+}
+```
+
 ### Sending multiple CAN frames
 
 ```cpp
@@ -173,6 +207,18 @@ void receiveCanFdFrame(CanDriver& driver) {
     if (!driver.waitForMessages()) { return; }
 
     const auto receivedMsg = driver.readCanFdMessage();
+}
+```
+
+### Receiving a CAN XL frame
+
+```cpp
+void receiveCanXlFrame(CanDriver& driver) {
+    driver.allowCanXlFrames();
+
+    if (!driver.waitForMessages()) { return; }
+
+    const auto receivedMsg = driver.readCanXlMessage();
 }
 ```
 
