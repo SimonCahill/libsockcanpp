@@ -25,15 +25,12 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt update
-        sudo apt -y install can-utils libsocketcan-dev googletest
-        while read -r cmd
-        do
-          eval sudo $cmd
-        done < <(Rscript -e 'writeLines(remotes::system_requirements("ubuntu", "20.04"))')
+        sudo apt -y install can-utils libsocketcan-dev googletest cmake ninja-build build-essential linux-modules-extra-$(uname -r)
+        sudo modprobe vcan
+        sudo ip link add dev vcan0 type vcan
+        sudo ip link set dev vcan0 up
 
     - uses: actions/checkout@v3
-    - uses: MarkusJx/googletest-installer@v1.1
-
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
@@ -47,5 +44,4 @@ jobs:
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -C ${{env.BUILD_TYPE}}
-
+      run: SOCKCANPP_REQUIRE_VCAN=1 ctest -C ${{env.BUILD_TYPE}} --output-on-failure

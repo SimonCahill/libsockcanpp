@@ -87,6 +87,24 @@ available when the library is built with `sockcanpp_CANXL_SUPPORT=ON`.
 This library provides a basic and straightforward API.
 The main class is `CanDriver`; it is multi-instance and thread-safe.
 
+### Running the test suite
+
+The communication tests create two `CanDriver` instances on a virtual CAN
+interface and exchange classical CAN ISO-TP frames entirely through this
+library. Set one up before running the tests:
+
+```sh
+sudo .devcontainer/setup-vcan.sh vcan0
+cmake -B build -DBUILD_TESTS=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Use `SOCKCANPP_TEST_INTERFACE` to select another interface. Communication tests
+skip when the interface is unavailable during local development; set
+`SOCKCANPP_REQUIRE_VCAN=1` in CI or a container to turn that condition into a
+failure.
+
 ### Setting up a CAN Socket
 
 > [!NOTE]

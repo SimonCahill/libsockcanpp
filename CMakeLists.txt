@@ -40,6 +40,7 @@ add_compile_options(
     -Werror
     -Wpedantic
     -Wno-unknown-pragmas
+    -Wno-constexpr-not-const
 )
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")

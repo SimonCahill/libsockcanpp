@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(libsockcanpp_unittests LANGUAGES CXX VERSION 0.1)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 
 find_package(GTest REQUIRED)
@@ -27,6 +25,8 @@ add_compile_options(
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD ${CMAKE_CXX_STANDARD})
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED ON)
 
 if (TARGET sockcanpp_test)
     set(LIBSOCKCANPP_TEST_TARGET sockcanpp_test)
@@ -42,4 +42,4 @@ target_link_libraries(
     pthread
 )
 
-gtest_discover_tests(${PROJECT_NAME})
+gtest_discover_tests(${PROJECT_NAME} PROPERTIES TIMEOUT 30 RESOURCE_LOCK can-interface)

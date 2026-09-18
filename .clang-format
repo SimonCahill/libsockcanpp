@@ -1,63 +1,65 @@
-AccessModifierOffset: 0
-AlignConsecutiveAssignments: true
-AllowShortBlocksOnASingleLine: true
-AllowShortFunctionsOnASingleLine: All
+AlignConsecutiveAssignments: AcrossEmptyLines
+AlignConsecutiveBitFields: AcrossEmptyLines
+AlignConsecutiveDeclarations: AcrossEmptyLines
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossComments: true
+  AcrossEmptyLines: false
+  AlignCaseColons: false
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 1
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: Yes
 BasedOnStyle: Google
-BreakBeforeBraces: Custom
-BraceWrapping:
-  #AfterCaseLabel: Never
-  AfterClass: false
-  AfterControlStatement: false
-  AfterEnum: false
-  AfterFunction: false
-  AfterNamespace: false
-  AfterStruct: false
-  AfterUnion: false
-  AfterExternBlock: false
-  BeforeCatch: false
-  BeforeElse: false
-  IndentBraces: false
-  SplitEmptyRecord: false
-  SplitEmptyNamespace: false
+BitFieldColonSpacing: Both
+BreakAfterAttributes: Leave
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Attach
-BreakBeforeTernaryOperators: false
-BreakConstructorInitializers: AfterColon
-BreakInheritanceList: AfterColon
-ColumnLimit: 160
-CompactNamespaces: false
-ConstructorInitializerAllOnOneLineOrOnePerLine: false
-ConstructorInitializerIndentWidth: 4
-Cpp11BracedListStyle: false
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+ColumnLimit: 180
+CompactNamespaces: true
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
 FixNamespaceComments: true
 IncludeBlocks: Regroup
+IndentAccessModifiers: true
 IndentCaseLabels: true
-#IndentGotoLabels: false # Clang 10
+IndentGotoLabels: false
 IndentPPDirectives: BeforeHash
 IndentWidth: 4
+InsertBraces: true
 Language: Cpp
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
+PackConstructorInitializers: NextLine
 PointerAlignment: Left
 SortIncludes: true
-SortUsingDeclarations: true
+# Alphabetise consecutive using declarations, including standard-library type imports.
+SortUsingDeclarations: Lexicographic
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
 SpaceAfterTemplateKeyword: false
 SpaceBeforeAssignmentOperators: true
-SpaceBeforeCpp11BracedList: true
+SpaceBeforeCpp11BracedList: false
 SpaceBeforeCtorInitializerColon: false
 SpaceBeforeInheritanceColon: false
 SpaceBeforeParens: ControlStatements
 SpaceBeforeRangeBasedForLoopColon: true
-#SpaceInEmptyBlock: true # Clang 10
+SpaceInEmptyBlock: true
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles: false
-SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: true
+SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard: Auto

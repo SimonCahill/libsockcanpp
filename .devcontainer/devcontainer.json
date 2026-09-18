@@ -33,6 +33,7 @@
       ]
     }
   },
+  "postCreateCommand": "sudo .devcontainer/setup-vcan.sh vcan0",
   "postAttachCommand": "zsh",
   "features": {}
 }
